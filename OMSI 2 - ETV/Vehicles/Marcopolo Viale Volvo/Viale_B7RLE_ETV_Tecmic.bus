@@ -1,0 +1,469 @@
+[friendlyname]
+ETV
+Viale (PT) Volvo B7RLE (Voith) Tecmic
+White
+
+[description]
+O modelo Viale (Gran Viale no Brasil) foi construído pela Marcopolo em Portugal entre 2004 e 2010 (ano do encerramento da fábrica da Marcopolo em Coimbra, passando para a Mobipeople), composto pelas versões urbana, articulada (unicamente em circulação em Barcelona) e o HF (High Floor, construído para Longo Curso ou interurbano). Ainda existe a versão de dois pisos panorâmico para a Carristur, uma modificação feita pela Liderbus, uma das viaturas foi construída e exportada para o Brasil, na empresa Vicasa, e ainda existe algumas versões feitas para o mercado britânico e europeu.
+
+Esta versão é baseada na primeira série 17XX da Companhia de Carris de Ferro de Lisboa (CCFL Carris), combinando com as viaturas com carroçaria CaetanoBus CityGold CI512 de 2008. Estão sob chassis Volvo B7R e com caixa Voith D854.4. Ainda existe uma versão produzida para os Serviços Municipais das Águas e dos Transportes de Portalegre (SMAT) e Serviços Municipalizados dos Transportes Urbanos de Coimbra (SMTUC).
+
+---------------
+
+Especificações:
+
+Largura: 11.9m
+Comprimento: 2.5m
+Altura: 2.88m
+
+Motor: Volvo D7C
+Potência: 320 hp @ 1,900rpm
+
+Caixa de Velocidades: Voith D854.4
+Velocidade Máxima: 74 km/h
+
+Peso ao Vazio: 11875 Kg
+Peso Bruto: 18000 Kg
+
+Lugares Sentados: 37
+Lugares de Pé: 40
+Cadeira de Rodas: 1
+[end]
+
+[number]
+Numbers_B7R - ETV.org
+
+[registration_list]
+Regs_B7R - ETV.org
+
+
+
+[kmcounter_init]
+2005
+1000
+
+
+
+[sound]
+sound\sound_Viale_B7R.cfg
+
+[sound_ai]
+sound\sound_Viale_B7R.cfg
+
+[model]
+model\B7RLE_Tecmic.cfg
+
+[paths]
+model\paths_B7RLE.cfg
+
+[passengercabin]
+model\passengercabin_B7RLE.cfg
+
+	////////////////////////////////////////////////////////
+		Scripts
+	////////////////////////////////////////////////////////
+
+[varnamelist]
+23
+script\AI_varlist.txt
+script\Collision_varlist.txt
+script\antrieb_voith_varlist.txt
+script\engine_varlist_B7R.txt
+script\elec_varlist_turbo.txt
+script\bremse_varlist.txt
+script\auspuff_varlist.txt
+script\TEMP\7700_lights_varlist.txt
+script\door_varlist.txt
+script\wiper_varlist.txt
+script\TEMP\7700_Cockpit_varlist.txt
+script\klappern_varlist.txt
+script\heizung_varlist.txt
+script\rain_varlist.txt
+script\dirt_varlist.txt
+script\Farego\ticketprinter_varlist.txt
+script\pt10\Vmatrix_varlist_NSS_LED.txt
+script\wimpel_varlist.txt
+script\visual_varlist.txt
+script\cashdesk_varlist.txt
+script\G3D\VolvoDashboard_varlist.txt
+script\spray_varlist.txt
+script\pt10\Tecmic_varlist.txt
+
+[stringvarnamelist]
+5
+script\Farego\ticketprinter_stringvarlist.txt
+script\pt10\Vmatrix_stringvarlist.txt
+script\cockpit_stringvarlist.txt
+script\G3D\VolvoDashboard_stringvarlist.txt
+script\pt10\Tecmic_stringvarlist.txt
+
+[script]
+25
+script\main.osc
+script\collision.osc
+script\TEMP\7700_Cockpit_31_3_18.osc
+script\antrieb_voith.osc
+script\engine_B7R.osc
+script\elec_turbo.osc
+script\bremse.osc
+script\auspuff.osc
+script\lights.osc
+script\door_auto.osc
+script\wiper.osc
+script\klappern.osc
+script\forcefeedback.osc
+script\rain.osc
+script\dirt.osc
+script\sound_volume.osc
+script\heizung.osc
+script\Farego\Ticketprinter.osc
+script\pt10\Vmatrix_NSS_LED.osc
+script\wimpel.osc
+script\cashdesk.osc
+script\summer.osc
+script\G3D\VolvoDashboard.osc
+script\spray.osc
+script\pt10\Tecmic.osc
+
+[constfile]
+19
+script\AI_constfile.txt
+script\collision_constfile.txt
+script\Voith_D854.5.txt
+script\engine_constfile_B7R.txt
+script\elec_constfile_turbo.txt
+script\bremse_constfile.txt
+script\lights_constfile.txt
+script\door_constfile.txt
+script\auspuff_constfile.txt
+script\cockpit_volvo7700FL_constfile.txt
+script\klappern_constfile.txt
+script\forcefeedback_constfile.txt
+script\wiper_constfile.txt
+script\dirt_constfile.txt
+script\heizung_constfile.txt
+script\Farego\IBIS_constfile.txt
+script\pt10\Vmatrix_constfile_NSS_LED.txt
+script\VolvoDashboard_constfile.txt
+Script\Farego\ticketprinter_constfile.txt
+
+
+
+
+	////////////////////////////////////////////////////////
+		Kameras *NEU01*
+	////////////////////////////////////////////////////////
+
+	0: Looking leftmost
+[add_camera_driver]
+-1.5
+4.18
+1.89
+-0.06
+55
+-170
+-5
+	1: Looking diagonally left
+[add_camera_driver]
+-0.70902
+4.38
+1.82
+-0.06
+55
+-60
+-5
+	2: Looking into the left mirror
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+0
+55
+-30
+12
+
+	3: Looking ahead (std)
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+0
+50
+0
+-7
+
+	4: Looking in the mirror right
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+0
+55
+35
+-5
+
+	5: At the door
+[add_camera_driver]
+-0.70902
+4.38
+1.82
+-0.06
+55
+70
+-6
+
+	6: Ticket sales view
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+0
+35
+37
+-16
+
+[view_ticketselling]
+
+
+	7: Looking far right
+[add_camera_driver]
+0
+4.18
+1.83
+-0.06
+55
+160
+-10
+
+
+	8: Panel-Zoom
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+-0.06
+55
+5
+-70
+
+	7: Timetable view
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+-0.06
+30
+-30
+45
+[view_schedule]
+
+
+
+################
+Passagiersichten
+################
+
+	0: Hinten links sitzend
+[add_camera_pax]
+-0.943
+-2.419
+2
+-0.06
+45
+25
+0
+
+	1: Stehplatz an der Hintertuer
+[add_camera_pax]
+-0.8
+0.409
+1.985
+-0.06
+45
+90
+0
+	2: vorne rechts sitzend
+[add_camera_pax]
+0.967
+1.374
+1.554
+-0.06
+45
+-20
+0
+
+	3: vorne rechts sitzend2
+[add_camera_pax]
+0.836
+3.455
+1.852
+-0.06
+45
+-20
+0
+
+	2: hinten rechts sitzend
+[add_camera_pax]
+0
+-5.3
+2.2
+-0.06
+45
+0
+0
+
+
+
+	Folgender Befehl setzt die Standardfahrerkamera:
+
+[set_camera_std]
+3
+
+	Folgender Befehl setzt den Zentrierpunkt der Au?enkamera:
+
+[set_camera_outside_center]
+0
+0
+1.2
+
+
+
+	////////////////////////////////////////////////////////
+		Reflexionskameras *NEU01*
+	////////////////////////////////////////////////////////
+	
+[add_camera_reflexion_2]
+-1.397
+5.21166
+2.09469
+0
+52
+169
+-10
+0.15
+
+[add_camera_reflexion_2]
+1.358
+5.90433
+2.033
+0
+52
+201
+-10
+0.15
+
+[add_camera_reflexion]
+0.108
+5.2
+2.45
+0
+52
+195
+-20
+
+[add_camera_reflexion_2]
+1.33136
+6.02872
+2.26738
+0
+61
+240
+-24
+0.15
+
+
+	////////////////////////////////////////////////////////
+		Physikalische und geometrische Grunddaten
+	////////////////////////////////////////////////////////
+
+	Masse in t:
+[mass]
+14.5
+
+	Trägheitsmomente um x, y und z-Achse, also Quer-, Längs- und Hochachse um den Schwerpunkt in dieser Reihenfolge in t*m^2:
+600
+250
+600
+
+[momentofintertia]
+600
+90
+400
+
+
+	Boundingbox des Busses *NEU01*
+	
+	Breite
+    Länge
+    Höhe
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Breitenachse in m (x)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Längsachse in m (y)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Hochachse in m (z) 
+
+[boundingbox]
+2.52
+12
+2.4
+0
+-0.35
+1.7
+
+	Höhe d. Schwerpunktes ueberm Boden:
+
+[schwerpunkt]
+1.2
+
+
+
+	Rollwiderstand (konstant, wird demnächst eventuell geändert) als Kraft in N
+[rollwiderstand]
+1000
+
+[rot_pnt_long]
+-2.700
+
+[inv_min_turnradius]
+0.13
+
+[ai_deltaheight]
+-0.10
+
+	Front axle :
+
+[newachse]
+achse_long
+3.15477
+achse_maxwidth
+2.25
+achse_minwidth
+1.76
+achse_raddurchmesser
+0.940
+achse_feder
+240
+achse_maxforce
+90
+achse_daempfer
+20
+achse_antrieb
+0
+
+	Rear axle:
+
+[newachse]
+achse_long
+-2.69331
+achse_maxwidth
+2.4
+achse_minwidth
+1.2
+achse_raddurchmesser
+0.94
+achse_feder
+280
+achse_maxforce
+116
+achse_daempfer
+20
+achse_antrieb
+1

@@ -1,0 +1,89 @@
+
+***************************************
+GreatGrundorf - NL 233 CNG
+***************************************
+
+[item]
+GreatGrundorf (233)
+farbschema_tex1
+233_GreatGrundorf.png
+
+[item]
+GreatGrundorf (233)
+farbschema_tex2
+int_GreatGrundorf.png
+
+[item]
+GreatGrundorf (233)
+farbschema_tex4
+alpha_Basic.tga
+
+[item]
+GreatGrundorf (233)
+farbschema_tex5
+NL233_Tecmic_EN.png
+
+[setvar]
+gear_button_type
+0
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+Tecmic_language
+2
+
+[setvar]
+visible_stamps
+0
+
+[setvar]
+fleet_number_color
+4
+
+
+***************************************
+GreatGrundorf - NL 313 CNG
+***************************************
+
+[item]
+GreatGrundorf (313)
+farbschema_tex1
+313_GreatGrundorf.png
+
+[item]
+GreatGrundorf (313)
+farbschema_tex2
+int_GreatGrundorf.png
+
+[item]
+GreatGrundorf (313)
+farbschema_tex4
+alpha_Basic.tga
+
+[item]
+GreatGrundorf (313)
+farbschema_tex5
+NL233_Tecmic_EN.png
+
+[setvar]
+gear_button_type
+1
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+Tecmic_language
+2
+
+[setvar]
+visible_stamps
+0
+
+[setvar]
+fleet_number_color
+4

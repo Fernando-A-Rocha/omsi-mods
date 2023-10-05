@@ -1,0 +1,98 @@
+
+***************************************
+Berlin - NL 233 CNG
+***************************************
+
+[item]
+Berlin (233)
+farbschema_tex1
+233_Berlin.png
+
+[item]
+Berlin (233)
+farbschema_tex2
+int_Berlin.png
+
+[item]
+Berlin (233)
+farbschema_tex3
+pub_STCP.png
+
+[item]
+Berlin (233)
+farbschema_tex4
+alpha_Berlin.tga
+
+[item]
+Berlin (233)
+farbschema_tex5
+NL233_Tecmic_DE.png
+
+[setvar]
+gear_button_type
+0
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+Tecmic_language
+1
+
+[setvar]
+visible_stamps
+0
+
+[setvar]
+fleet_number_color
+2
+
+***************************************
+Berlin - NL 313 CNG
+***************************************
+
+[item]
+Berlin (313)
+farbschema_tex1
+313_Berlin.png
+
+[item]
+Berlin (313)
+farbschema_tex2
+int_Berlin.png
+
+[item]
+Berlin (313)
+farbschema_tex3
+pub_STCP.png
+
+[item]
+Berlin (313)
+farbschema_tex4
+alpha_Berlin.tga
+
+[item]
+Berlin (313)
+farbschema_tex5
+NL233_Tecmic_DE.png
+
+[setvar]
+gear_button_type
+1
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+Tecmic_language
+1
+
+[setvar]
+visible_stamps
+0
+
+[setvar]
+fleet_number_color
+2

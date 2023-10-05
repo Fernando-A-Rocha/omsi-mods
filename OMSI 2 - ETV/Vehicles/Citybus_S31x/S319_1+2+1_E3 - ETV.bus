@@ -1,0 +1,503 @@
+[friendlyname]
+ETV
+S319 NF 1+2+1 EURO3 ZF5HP592C
+Car Postal Region Ouest (jura)
+
+[description]
+Ils sont consideres comme une gamme d'autobus tres fiable, les autobus urbains S31X.   
+Au cours de leur periode de production de 1996 à 2006, ces bus ont ete fabriques non seulement en Allemagne, mais aussi en France.    
+Grace à la qualite de fabrication et à la longévité des moteurs, de nombreux autobus de cette serie sont toujours en service dans les entreprises de transport public. Ils sont egalement souvent utilisés comme bus scolaires ou sur des lignes interurbaines. 
+Leur temps est cependant compte, car les réglementations environnementales rendent leur utilisation impossible dans de nombreuses villes, de plus en raison de leur usage interurbain, ces vehicules ont beaucoup roule, certains atteignant meme 1.3 millions de km.  
+
+
+ - Dimensions
+ Longueur : 14700mm
+ Largeur : 2500mm
+ Hauteur : 3150mm
+ 
+ -Groupe motopropulseur
+ Moteur : OM457HLA Euro 3
+ Cylindree : 11,967L
+ Puissance : 260kW
+ Boite de Vitesse : ZF5HP592C
+
+ -Annees de Production
+2001-2006
+
+SADOP ltd, ADIC group, 2022.
+[end]
+
+	[number] aktiviert die Zuweisung von Nummern
+	{colorscheme specific numbers path}	Pfad zu den *.org-(Omsi-Registration)-Dateien, welche für die Vergabe von Nummern zuständig sind.
+
+	Aufbau einer Nummernliste: in der ersten Zeile kommt der Name des Anstrichs (wie er auch im CTC angegeben wird), dann beliebig viele zulässige Nummern.
+	Steht in der ersten Zeile nichts, dann handelt es sich um die "Hauptliste", welche für alle Anstriche gilt, für welche keine Nummern spezifiziert werden.
+
+
+	[registration_automatic] aktiviert die Zuweisung der Kennzeichen im automatischen Modus
+	{regPrefix}				Präfix vor Nummer am Kennzeichen. Soll bspw. Nr 2000 das Kennzeichen "D-A 2000H" bekommen, ist der Präfix "D-A "
+	{regPostfix}				Postfix hinter Nummer am Kennzeichen. Im obigen Beispiel "H".
+
+	[registration_list] öffnet die angegebene Datei, um die Kennzeichenzuweisung nach den Nummern vorzunehmen. Der Index läuft hierbei parallel zu jener *.org-Datei, welche die Hauptliste enthält.
+	{filename}
+
+	[registration_free] aktiviert die freie Kennzeichenzuweisung. Im AI-Modus wird ein Kennzeichen der Map-Registrations-Datei verwendet, der User kann es für sein Fahrzeug frei wählen.
+
+
+
+
+[number]
+Regs_A21 - ETV.org
+
+	[registration_free]
+
+[registration_automatic]
+
+
+
+[kmcounter_init]
+2003
+722471
+
+
+
+[sound]
+sound\OM457HLAE3_319.cfg
+
+[sound_ai]
+sound\OM457HLAE3_319_AI.cfg
+
+[model]
+model\Model_319_1+2+1_E3.cfg
+
+[paths]
+model\paths_319_1+2+1.cfg
+
+[passengercabin]
+model\passengercabin_3650.cfg
+
+	////////////////////////////////////////////////////////
+		Scripts
+	////////////////////////////////////////////////////////
+
+[varnamelist]
+26
+Script\AI_varlist.txt
+script\Collision_varlist.txt
+script\ZF\zf_5HP_varlist.txt
+script\MOTEUR\Engine_varlist.txt
+Script\Elec_varlist.txt
+script\Bremse_varlist.txt
+script\auspuff_varlist.txt
+script\Lights_varlist.txt
+Script\PORTES\doors_varlist.txt
+script\wiper_varlist.txt
+Script\Cockpit_varlist.txt
+script\klappern_varlist.txt
+script\heizung_varlist.txt
+script\rain_varlist.txt
+script\dirt_varlist.txt
+script\wimpel_varlist.txt
+Script\visual_varlist.txt
+script\cashdesk_varlist.txt
+script\spray_varlist.txt
+Script\ticketprinter_varlist.txt
+Script\IBIS_varlist.txt
+script\Krueger_past\Vmatrix_varlist.txt
+script\Drucker\AFR4_varlist.txt
+script\DASH\Actia_varlist.txt
+script\DASH\Dash_varlist.txt
+Script\Drucker\AD_INEO_TFT_varlist.txt
+
+[stringvarnamelist]
+8
+script\Cockpit_stringvarlist.txt
+Script\ticketprinter_stringvarlist.txt
+Script\IBIS_stringvarlist_lcd.txt
+script\Krueger_past\Vmatrix_stringvarlist.txt
+script\DASH\Actia_stringvarlist.txt
+script\DASH\Dash_stringvarlist.txt
+script\Drucker\AFR4_stringlist.txt
+Script\Drucker\AD_INEO_TFT_stringvarlist.txt
+
+[script]
+29
+script\Drucker\main.osc
+Script\Main_AI.osc
+script\collision.osc
+Script\Cockpit.osc
+script\ZF\zf_5HP.osc
+script\MOTEUR\Engine.osc
+Script\Elec.osc
+Script\Bremse.osc
+script\auspuff.osc
+script\Lights.osc
+Script\PORTES\doors_3D.osc
+script\wiper.osc
+script\klappern.osc
+script\forcefeedback.osc
+script\rain.osc
+script\dirt.osc
+script\sound_volume.osc
+script\heizung.osc
+script\Krueger_past\VMatrix.osc
+script\wimpel.osc
+script\cashdesk.osc
+script\summer.osc
+script\spray.osc
+Script\Ticketprinter.osc
+Script\IBIS-2.osc
+script\DASH\Actia_2.osc
+script\DASH\Dash.osc
+script\Drucker\AFR4.osc
+Script\Drucker\AD_INEO_TFT_SW.osc
+
+[constfile]
+22
+script\AI_constfile.txt
+script\collision_constfile.txt
+script\ZF\zf_5HP602C.txt
+Script\MOTEUR\OM457HLA260.txt
+Script\Elec_constfile.txt
+Script\Bremse_constfile.txt
+script\Lights_constfile.txt
+Script\PORTES\door_E3_constfile.txt
+script\auspuff_constfile.txt
+script\Cockpit_constfile.txt
+script\klappern_constfile.txt
+script\forcefeedback_constfile.txt
+script\wiper_constfile.txt
+script\dirt_constfile.txt
+script\heizung_constfile.txt
+Script\ticketprinter_constfile.txt
+script\Krueger_past\Vmatrix_constfile.txt
+script\DASH\Actia_constfile.txt
+script\DASH\Dash_constfile.txt
+script\Drucker\AFR4_constfile.txt
+Script\IBIS_constfile.txt
+Script\Drucker\AD_INEO_TFT_constfile.txt
+
+
+
+	////////////////////////////////////////////////////////
+		Kameras *NEU01*
+	////////////////////////////////////////////////////////
+
+	0: Blick nach ganz links
+[add_camera_driver]
+-0.95
+5.5
+1.9
+-0.06
+60
+-125
+0
+	1: Blick nach schraeg links
+[add_camera_driver]
+-0.665044
+5.1
+1.9
+-0.06
+60
+-85
+0
+	2: Blick in den linken Spiegel
+[add_camera_driver]
+-0.665044
+4.75
+1.9
+-0.06
+55
+-25
+5
+
+	3: Blick nach vorne (std)
+[add_camera_driver]
+-0.665044
+4.7
+1.85
+-0.06
+66
+0
+-3
+
+	4: Blick in den rechten Spiegel
+[add_camera_driver]
+-0.665044
+4.75
+1.9
+-0.06
+55
+35
+1
+
+	5: Blick zur Tuer
+[add_camera_driver]
+-0.680
+5
+1.9
+-0.06
+60
+90
+-10
+
+	6: Blick nach ganz rechts
+[add_camera_driver]
+-0.15
+4.95
+2.16
+-0.06
+60
+135
+-10
+
+	7: Fahrscheinverkauf-Sicht
+[add_camera_driver]
+-0.75
+4.8
+1.7
+-0.06
+30
+65
+-40
+[view_ticketselling]
+
+	8: Fahrplan-Sicht
+[add_camera_driver]
+-0.650678
+4.75
+1.9
+-0.06
+30
+-20
+45
+[view_schedule]
+
+
+
+################
+Passagiersichten
+################
+
+	
+	0: Hinten links sitzend
+[add_camera_pax]
+-0.9
+-2.4
+2
+-0.06
+45
+25
+0
+
+	1: Stehplatz an der Hintertuer
+[add_camera_pax]
+-0.24
+-1.2
+2.05
+-0.06
+55
+90
+0
+	2: vorne rechts sitzend
+[add_camera_pax]
+-0.55
+2.89
+2
+-0.06
+35
+180
+0
+
+	3: vorne rechts sitzend2
+[add_camera_pax]
+0.79
+3.7
+2
+-0.06
+45
+-25
+0
+
+	2: hinten rechts sitzend
+[add_camera_pax]
+0
+-8
+2.4
+-0.06
+50
+0
+-5
+
+
+
+	Folgender Befehl setzt die Standardfahrerkamera:
+
+[set_camera_std]
+3
+
+	Folgender Befehl setzt den Zentrierpunkt der Au?enkamera:
+
+[set_camera_outside_center]
+0
+-1.26
+1.2
+
+
+
+	////////////////////////////////////////////////////////
+		Reflexionskameras *NEU01*
+	////////////////////////////////////////////////////////
+	
+[add_camera_reflexion_2]
+-1.33
+5.56
+2.18
+0
+52
+165
+-12
+0.15
+
+[add_camera_reflexion]
+1.37
+6.39
+2.29
+0
+52
+202
+-11
+
+[add_camera_reflexion]
+0
+5.63
+2.24
+0
+35
+196
+-14
+
+[add_camera_reflexion]
+1.34
+6.35
+2.51
+0
+60
+229
+-28.5
+
+	////////////////////////////////////////////////////////
+		Physikalische und geometrische Grunddaten
+	////////////////////////////////////////////////////////
+
+	Masse in t:
+[mass]
+15.6
+
+	Trägheitsmomente um x, y und z-Achse, also Quer-, Längs- und Hochachse um den Schwerpunkt in dieser Reihenfolge in t*m^2:
+339
+73.45
+339
+
+[momentofintertia]
+339
+73.45
+339
+
+
+	Boundingbox des Busses *NEU01*
+	
+	Breite
+    Länge
+    Höhe
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Breitenachse in m (x)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Längsachse in m (y)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Hochachse in m (z) 
+
+[boundingbox]
+2.5
+14.7
+2.4
+0
+-1.26421
+1.67
+
+	Höhe d. Schwerpunktes ueberm Boden:
+
+[schwerpunkt]
+1.07
+
+
+
+	Rollwiderstand (konstant, wird demnächst eventuell geändert) als Kraft in N
+[rollwiderstand]
+1000
+
+[rot_pnt_long]
+-2
+
+[inv_min_turnradius]
+0.169
+
+[ai_deltaheight]
+-0.10
+
+	Front axle :
+
+[newachse]
+achse_long
+3.38181
+achse_maxwidth
+2.42
+achse_minwidth
+1.76
+achse_raddurchmesser
+1.03
+achse_feder
+284.6
+achse_maxforce
+70
+achse_daempfer
+20
+achse_antrieb
+0
+
+	Middle axle:
+
+[newachse]
+achse_long
+-3.51805
+achse_maxwidth
+2.48
+achse_minwidth
+1.12
+achse_raddurchmesser
+1.03
+achse_feder
+250
+achse_maxforce
+115
+achse_daempfer
+20
+achse_antrieb
+1
+
+	Rear axle:
+
+[newachse]
+achse_long
+-4.228
+achse_maxwidth
+2.42
+achse_minwidth
+1.76
+achse_raddurchmesser
+1.03
+achse_feder
+75
+achse_maxforce
+58
+achse_daempfer
+20
+achse_antrieb
+0

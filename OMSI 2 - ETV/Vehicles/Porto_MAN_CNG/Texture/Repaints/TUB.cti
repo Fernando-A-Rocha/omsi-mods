@@ -1,0 +1,101 @@
+
+***************************************
+TUB Braga - NL 233 CNG
+***************************************
+
+[item]
+TUB (233)
+farbschema_tex1
+233_TUB.png
+
+[item]
+TUB (233)
+farbschema_tex2
+int_TUB.png
+
+[item]
+TUB (233)
+farbschema_tex4
+alpha_TUB.tga
+
+[item]
+TUB (233)
+farbschema_tex5
+NL233_Tecmic.png
+
+[item]
+TUB (233)
+farbschema_tex6
+pub_ext_STCP.png
+
+[setvar]
+gear_button_type
+0
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+visible_pub_ext
+1
+
+[setvar]
+Tecmic_language
+0
+
+[setvar]
+visible_stamps
+1
+
+[setvar]
+fleet_number_color
+2
+
+***************************************
+TUB Braga Antigo Esquema - NL 233 CNG
+***************************************
+
+[item]
+TUB Old (233)
+farbschema_tex1
+233_TUB2.png
+
+[item]
+TUB Old (233)
+farbschema_tex2
+int_TUB.png
+
+[item]
+TUB Old (233)
+farbschema_tex4
+alpha_TUB2.tga
+
+[item]
+TUB Old (233)
+farbschema_tex5
+NL233_Tecmic.png
+
+[setvar]
+gear_button_type
+0
+
+[setvar]
+visible_pub
+0
+
+[setvar]
+visible_pub_ext
+0
+
+[setvar]
+Tecmic_language
+0
+
+[setvar]
+visible_stamps
+1
+
+[setvar]
+fleet_number_color
+6

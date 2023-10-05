@@ -1,0 +1,16 @@
+
+***************************************
+Neutral_SST
+***************************************
+
+[item]
+Neutral_SST
+farbschema_tex1
+C2E6_LE_Wagenkasten_SST.tga
+
+
+
+[setvar]
+Tuer2_IST_SST
+1
+

@@ -1,0 +1,442 @@
+﻿
+[friendlyname]
+ETV
+O530 L 102
+White
+
+[description]
+Der Mercedes-Benz Citaro, ist eine für den Linienverkehr entwickelte Omnibus-Baureihe von Daimler-Benz beziehungsweise deren Tochtergesellschaft EvoBus.
+Nach 17 Jahren wurden 2014 über 40.000 Citaros ausgeliefert, womit dieser Bus einer der erfolgreichsten Linienbusse ist.
+
+-Technische Daten-
+
+Länge: 14.995 mm
+Breite: 2550 mm
+Höhe 3076 mm
+
+
+Motor: Voith DIWA.5, 205 kW / 279 PS
+Höchstgeschwindigkeit: 91 km/h
+
+Leergewicht: 13800 kg
+Zulässiges Gesamtgewicht: 25.000 kg
+
+Sitzplätze: 53
+Stehplätze: 96
+[end]
+
+[number]
+Regs_O530.org
+
+	[registration_free]
+
+[registration_automatic]
+B-V 
+
+
+[kmcounter_init]
+1997
+60000
+
+
+
+[sound]
+sound-Citaro\sound_m447hlag.cfg
+
+[sound_ai]
+sound-Citaro\sound_m447hlag.cfg
+
+[model]
+model\model_O530_L_Aussenschwenktueren_K++ - 102.cfg
+
+[paths]
+model\paths.cfg
+
+[passengercabin]
+model\passengercabin_O530.cfg
+
+	////////////////////////////////////////////////////////
+		Scripts
+	////////////////////////////////////////////////////////
+[varnamelist]
+24
+script\AI_varlist.txt
+script\Collision_varlist.txt
+script\ZF5HP500\Gearbox_ZF_varlist.txt
+script\ZF5HP500\engine_turbo_varlist.txt
+script\elec_varlist.txt
+script\bremse_varlist.txt
+script\auspuff_varlist.txt
+script\lights_varlist.txt
+script\door_varlist.txt
+script\wiper_varlist.txt
+script\cockpit_varlist.txt
+script\klappern_varlist.txt
+script\rollband_varlist.txt
+script\heizung_varlist.txt
+script\rain_varlist.txt
+script\dirt_varlist.txt
+script\IBIS_varlist.txt
+script\churaKrueger\VMatrix_varlist.txt
+script\wimpel_varlist.txt
+script\visual_varlist.txt
+script\cashdesk_varlist.txt
+script\ticketprinter_varlist.txt
+script\Siemens VDO Panel_vars.txt
+script\spray_varlist.txt
+
+[stringvarnamelist]
+5
+script\IBIS_stringvarlist.txt
+script\churaKrueger\VMatrix_stringvarlist.txt
+script\ticketprinter_stringvarlist.txt
+script\cockpit_stringvarlist.txt
+script\Matrix_fontfile_stringvarlist.txt
+
+[script]
+30
+script\man_D92_main.osc
+script\man_D86_main_AI.osc
+script\collision.osc
+script\cockpit.osc
+script\ZF5HP500\ZF-Ecomat_I.osc
+script\ZF5HP500\engine_b2.osc
+script\elec.osc
+script\bremse.osc
+script\auspuff.osc
+script\lights.osc
+script\door_manual.osc
+script\wiper.osc
+script\klappern.osc
+script\forcefeedback.osc
+script\rain.osc
+script\dirt.osc
+script\sound_volume.osc
+script\heizung.osc
+script\IBIS-2.osc
+script\churaKrueger\VMatrix.osc
+script\wimpel.osc
+script\cashdesk.osc
+script\ticketprinter.osc
+script\summer.osc
+script\Siemens VDO Panel.osc
+script\Siemens VDO Disp1.osc
+script\Siemens VDO Disp2.osc
+script\Siemens VDO Disp3.osc
+script\Siemens VDO Disp4.osc
+script\spray.osc
+
+[constfile]
+19
+script\AI_constfile.txt
+script\collision_constfile.txt
+script\ZF5HP500\gearbox_ZF_Ecomat_I_5HP-500.txt
+script\ZF5HP500\engine_constfile_D92_ZF_D08_turbo.txt
+script\elec_constfile.txt
+script\bremse_constfile_D92.txt
+script\lights_constfile.txt
+script\door_constfile_D92.txt
+script\auspuff_constfile.txt
+script\cockpit_constfile_D92.txt
+script\klappern_constfile.txt
+script\rollband_constfile.txt
+script\forcefeedback_constfile.txt
+script\wiper_constfile.txt
+script\dirt_constfile.txt
+script\heizung_constfile.txt
+script\IBIS_constfile.txt
+script\churaKrueger\VMatrix_constfile_K++.txt
+script\Siemens VDO Panel_const.txt
+
+
+
+
+	////////////////////////////////////////////////////////
+		Kameras *NEU01*
+	////////////////////////////////////////////////////////
+
+	0: Blick nach ganz links
+[add_camera_driver]
+-1.5
+4.68
+1.84
+-0.06
+55
+-170
+-5
+	1: Blick nach schrдg links
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+-60
+-5
+	2: Blick in den linken Spiegel
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+-30
+2
+
+	3: Blick nach vorne (std)
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+0
+-10
+
+
+
+
+	4: Blick in den rechten Spiegel
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+33
+10
+
+	5: Blick zur Tьr
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+70
+-10
+
+	6: Fahrscheinverkauf-Sicht
+[add_camera_driver]
+-0.713
+4.78
+1.84
+-0.06
+50
+60
+-35
+
+[view_ticketselling]
+
+
+	7: Blick nach ganz rechts
+[add_camera_driver]
+0
+4.68
+1.78
+-0.06
+55
+160
+-10
+
+
+	8: Panel-Zoom
+[add_camera_driver]
+-0.713
+5
+2.25
+-0.06
+55
+5
+-70
+
+	7: Fahrplan-Sicht
+[add_camera_driver]
+-0.713
+4.68
+1.84
+-0.06
+55
+-15
+45
+[view_schedule]
+
+
+
+################
+Passagiersichten
+################
+
+	0: Hinten links sitzend
+[add_camera_pax]
+-0.945
+-2.185
+2
+-0.06
+45
+25
+0
+
+	1: Stehplatz an der Hintertuer
+[add_camera_pax]
+-0.8
+-0.6
+2.05
+-0.06
+45
+90
+0
+	2: vorne rechts sitzend
+[add_camera_pax]
+0.94
+1.67
+1.6
+-0.06
+45
+-20
+0
+
+
+
+
+	Folgender Befehl setzt die Standardfahrerkamera:
+
+[set_camera_std]
+3
+
+	Folgender Befehl setzt den Zentrierpunkt der AuЯenkamera:
+
+[set_camera_outside_center]
+0
+0
+1.2
+
+
+
+	////////////////////////////////////////////////////////
+		Reflexionskameras *NEU01*
+	////////////////////////////////////////////////////////
+	
+[add_camera_reflexion_2]
+-1.348
+5.56
+2.2
+0
+52
+169
+-10
+0.15
+
+[add_camera_reflexion]
+1.4
+6.12
+2.2
+0
+52
+201
+-10
+
+
+[add_camera_reflexion_2]
+0.266
+4.92
+2.508
+0
+52
+210
+-30
+0.2
+
+
+[add_camera_reflexion]
+0.34
+-1.39
+2.4
+0
+52
+30
+-30
+
+
+
+
+	////////////////////////////////////////////////////////
+		Physikalische und geometrische Grunddaten
+	////////////////////////////////////////////////////////
+
+[mass]
+13.80
+
+500
+200
+500
+
+[momentofintertia]
+300
+80
+300
+
+[boundingbox]
+2.514
+14.923
+3.120
+0
+-1.44
+2.57
+
+[cog]
+0
+0
+0.8
+
+[rollwiderstand]
+1000
+
+[rot_pnt_long]
+-2.98
+
+[inv_min_turnradius]
+0.16
+
+[ai_deltaheight]
+-0.10
+
+	Vorderachse:
+
+[newachse]
+achse_long
+3.275
+achse_maxwidth
+2.4
+achse_minwidth
+1.83
+achse_raddurchmesser
+1.02
+achse_feder
+240
+achse_maxforce
+90
+achse_daempfer
+14
+achse_antrieb
+0
+
+	Hinterachse:
+
+[newachse]
+achse_long
+-2.615
+achse_maxwidth
+2.4
+achse_minwidth
+1.17
+achse_raddurchmesser
+1.02
+achse_feder
+280
+achse_maxforce
+116
+achse_daempfer
+14
+achse_antrieb
+1

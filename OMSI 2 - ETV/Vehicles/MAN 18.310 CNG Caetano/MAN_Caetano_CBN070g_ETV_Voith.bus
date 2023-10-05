@@ -1,0 +1,569 @@
+[friendlyname]
+ETV
+18.310 CNG CaetanoBus ETV
+White
+
+[description]
+Fazendo parte do programa da PO-SEUR para o Governo Português, que consiste na aquisição de autocarros eléctricos e/ou movidos a gás natural. Desde 2016 foi testado o modelo da CaetanoBus, o e.CityGold, em várias empresas portuguesas de transportes públicos e também chegou a ser apresentado no FIAA Madrid em 2017. Seguindo as linhas do e.CityGold e do EcoCity (o último produzido para o mercado britânico), o CityGold CBN070g é o modelo a gás natural produzido para o mencioando programa desde 2018. Desde a edição desta descrição em Fevereiro de 2020, entraram mais de 100 para a Companhia de Carris de Ferro de Lisboa, duas remessas destas viaturas (35 em 2018 e 59 em 2019, 94 no total - por confirmar) ficaram completas para a Sociedade de Transportes Colectivos do Porto, S.A., uma viatura na froa da Barraqueiro Santo António (viatura 544, igual ao da STCP e rumorizado como a viatura rejeitada pela empresa do Porto), e maior parte das 60 viaturas para os Transportes Colectivos do Barreiro estão em circulação comercial; sob o chassis MAN A69 (18.310 HOCL-NL CNG) produzido em Starachowice (Polónia), sendo este por defeito de fabricação da carroçaria. Por outro lado, estão ainda a ser preparados, não só para as três empresas (no caso dos TCB, parte das 60 viaturas são de 13 metros), mas também comfirmadas encomendas para a Transportes Urbanos de Braga (TUB; ainda com mais e.CityGold) e, possivelmente, 62 de piso baixo e 19 dos tais 18.310 CNG para a STCP (por confirmar a carroçaria), e para a ETG (mais os e.CityGold, por confirmar). Isto permite a retirada de veículos mais antigos, sendo a diesel (CCFL e TCB) ou a gás natural (série 3001-3077 da STCP).
+
+Esta versão é baseada no modelo da STCP, com as primeiras 35 unidades produzidas e em circulação entre Abril e Dezembro de 2018, sendo a série 3251-3285, e a segunda remessa produzida em 2019, com os números 3286-3344, em que a série a partir do 3334 leva as etiquetas da PO-SEUR localizadas acima da oitava janela de cada lateral. Uma das viaturas (em Março de 2020) levou uma cabine de motorista, possivelmente para testes para melhor protecção para zonas mais problemáticas do Grande Porto, mesmo e coincidente em situações contra o COVID-19.
+A tranche final ocorre no ano de 2020, com possibilidade de serem produzidos mais 19 low-entry e 62 de piso baixo. Esta série também ficou "célebre" por excederem uma certa altura para a passagem de alguns túneis, o que causa a impossibilitação de fazerem algumas linhas:
+- 300, 301 e 304 (viaduto rodoviário em Santa Luzia, no Porto)
+- 705 (viaduto ferroviário em Valongo; o caso desta linha é pertencente à Recolha da Via Norte, ou seja, afecta a veículos a diesel)
+- 803 (viaduto ferroviário de Rio Tinto, em Gondomar)
+A linha 903 era outra linha listada devido à altura do túnel do viaduto rodoviário no Bairro do Cedro, em Vila Nova de Gaia, mas após testes realizados, foi possível dar sinal verde para a linha ser realizada com as novas viaturas.
+
+---------------
+
+Especificações:
+
+Largura: 11.9m
+Comprimento: 2.5m
+Altura: 3.5m
+
+Chassis: MAN E2876 LUH Euro 6
+Potência: 310 hp @ 1,900rpm
+
+Caixa de Velocidades: Voith D864.6
+Velocidade Máxima: 85 km/h
+
+Peso ao Vazio: 11875 Kg
+Peso Bruto: 18000 Kg
+
+Lugares Sentados: 32 (36 com rebatíveis)
+Lugares de Pé: 40 (44 com rebatíveis fechados)
+Cadeira de Rodas: 1
+
+---------------
+
+Créditos:
+Modelo-Base: MAN A21 do Vengeance3D
+Alteração para o MAN 18.310 CNG Caetano: Omsi Vimeca
+Modelos 3D: Vengeance3D pelo cockpit e ecrã do MAN A20 U, OMSI 2 Porto (pedropt10) pelo Tecmic e pela bandeira LED da NSS, Rúben Maravalhas pelo validador da STCP, alTerr e Morphi por alguns componentes do Citaro e Solaris, Sobol pelo volante e outros componentes (NeoMAN Overhaul)
+Scripts: Sobol (portas do A47), OMSI 2 Porto (pedropt10) e modelo-base
+Sons: Morphi, Vengeance3D, Sobol, fuljo, Filipe.PT1726, Helvete, OMSI 2 Porto (pedropt10), TEA-Workshop, Marco Alexandre, martinho724
+Texturas: Filipe.PT1726, Autocarros de Lisboa, Omsi Vimeca, alTerr, Morphi, Luís Pimenta, Paulo Almeida e modelo-base
+Pinturas: Omsi Vimeca, Filipe.PT1726, Rúben Maravalhas, Luís Pimenta, Rúben Sousa, Ricardo Fragoso, Miguel Diogo Rodrigues e Rúben Veiga
+Ficheiros HOF: Luís Pimenta e Filipe.PT1726
+Agradecimentos: Autocarros de Lisboa, Autocarros do Porto, Mundo dos Autocarros (páginas do Facebook), grupos de entusiastas no Facebook e beta-testers
+[end]
+
+	[number] aktiviert die Zuweisung von Nummern
+	{colorscheme specific numbers path}	Pfad zu den *.org-(Omsi-Registration)-Dateien, welche für die Vergabe von Nummern zuständig sind.
+
+	Aufbau einer Nummernliste: in der ersten Zeile kommt der Name des Anstrichs (wie er auch im CTC angegeben wird), dann beliebig viele zulässige Nummern.
+	Steht in der ersten Zeile nichts, dann handelt es sich um die "Hauptliste", welche für alle Anstriche gilt, für welche keine Nummern spezifiziert werden.
+
+
+	[registration_automatic] aktiviert die Zuweisung der Kennzeichen im automatischen Modus
+	{regPrefix}				Präfix vor Nummer am Kennzeichen. Soll bspw. Nr 2000 das Kennzeichen "D-A 2000H" bekommen, ist der Präfix "D-A "
+	{regPostfix}				Postfix hinter Nummer am Kennzeichen. Im obigen Beispiel "H".
+
+	[registration_list] öffnet die angegebene Datei, um die Kennzeichenzuweisung nach den Nummern vorzunehmen. Der Index läuft hierbei parallel zu jener *.org-Datei, welche die Hauptliste enthält.
+	{filename}
+
+	[registration_free] aktiviert die freie Kennzeichenzuweisung. Im AI-Modus wird ein Kennzeichen der Map-Registrations-Datei verwendet, der User kann es für sein Fahrzeug frei wählen.
+
+
+
+
+
+[number]
+Numbers_ETV.org
+
+[registration_list]
+Regs_ETV.org
+
+
+[kmcounter_init]
+2018
+1000
+
+
+
+[sound]
+sound\sound_voith_cng.cfg
+
+[sound_ai]
+sound\sound_voith_cng.cfg
+
+[model]
+model\18.310_Voith.cfg
+
+[paths]
+model\paths.cfg
+
+[passengercabin]
+model\passengercabin.cfg
+
+	////////////////////////////////////////////////////////
+		Scripts
+	////////////////////////////////////////////////////////
+
+[varnamelist]
+22
+script\AI_varlist.txt
+script\Collision_varlist.txt
+script\antrieb_voith_varlist.txt
+script\engine_varlist.txt
+script\elec_varlist.txt
+script\bremse_varlist.txt
+script\auspuff_varlist.txt
+script\lights_varlist.txt
+script\door_varlistA47.txt
+script\wiper_varlist.txt
+script\cockpit_varlist.txt
+script\klappern_varlist.txt
+script\heizung_varlist.txt
+script\rain_varlist.txt
+script\dirt_varlist.txt
+script\wimpel_varlist.txt
+script\visual_varlist.txt
+script\cashdesk_varlist.txt
+script\MAN_dashboard_varlist.txt
+script\spray_varlist.txt
+script\pt10\Tecmic_varlist.txt
+script\pt10\Vmatrix_varlist_NSS_LED_STCP.txt
+
+[stringvarnamelist]
+4
+script\cockpit_stringvarlist.txt
+script\MAN_dashboard_stringvarlist.txt
+script\pt10\Tecmic_stringvarlist.txt
+script\pt10\Vmatrix_stringvarlist.txt
+
+[script]
+27
+script\AI.osc
+script\main.osc
+script\main_AI.osc
+script\collision.osc
+script\cockpit.osc
+script\antrieb_voith.osc
+script\engine.osc
+script\elec.osc
+script\bremse.osc
+script\auspuff.osc
+script\lights.osc
+script\door_autoA47.osc
+script\wiper.osc
+script\klappern.osc
+script\forcefeedback.osc
+script\rain.osc
+script\dirt.osc
+script\sound_volume.osc
+script\heizung.osc
+script\wimpel.osc
+script\cashdesk.osc
+script\summer.osc
+script\MAN_dashboard.osc
+script\spray.osc
+script\pt10\Tecmic.osc
+script\pt10\Vmatrix_NSS_LED_STCP.osc
+script\pt10\Ticketprinter.osc
+
+[constfile]
+17
+script\AI_constfile.txt
+script\collision_constfile.txt
+script\antrieb_voith_constfile.txt
+script\engine_constfile.txt
+script\elec_constfile.txt
+script\bremse_constfile.txt
+script\lights_constfile.txt
+script\door_constfileA47A.txt
+script\auspuff_constfile.txt
+script\cockpit_constfile.txt
+script\klappern_constfile.txt
+script\forcefeedback_constfile.txt
+script\wiper_constfile.txt
+script\dirt_constfile.txt
+script\heizung_constfile.txt
+script\pt10\Vmatrix_constfile_NSS_LED_STCP.txt
+script\MAN_dashboard_constfile.txt
+
+
+
+
+	////////////////////////////////////////////////////////
+		Kameras *NEU01*
+	////////////////////////////////////////////////////////
+
+	0: Looking leftmost
+[add_camera_driver]
+-1.5
+4.18
+1.89
+-0.06
+55
+-170
+-5
+	1: Looking diagonally left
+[add_camera_driver]
+-0.70902
+4.38
+1.82
+-0.06
+55
+-60
+-5
+	2: Looking into the left mirror
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+0
+55
+-30
+15
+
+	3: Looking ahead (std)
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+0
+50
+0
+-7
+
+	4: Looking in the mirror right
+[add_camera_driver]
+-0.70902
+4.42
+1.78
+-0.06
+55
+33
+10
+
+	5: At the door
+[add_camera_driver]
+-0.70902
+4.38
+1.82
+-0.06
+55
+70
+-6
+
+	6: Ticket sales view
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+0
+35
+37
+-16
+
+[view_ticketselling]
+
+
+	7: Looking far right
+[add_camera_driver]
+0
+4.18
+1.83
+-0.06
+55
+160
+-10
+
+
+	8: Panel-Zoom
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+-0.06
+55
+5
+-70
+
+	9: Timetable view
+[add_camera_driver]
+-0.73916
+4.38
+1.82
+-0.06
+30
+-30
+45
+[view_schedule]
+
+
+
+################
+Passagiersichten
+################
+
+	0: Left Seat View
+[add_camera_pax]
+-0.9
+-1.5
+2.15
+-0.06
+45
+25
+0
+
+	1: Back Door View
+[add_camera_pax]
+-1
+-0.35
+2
+-0.06
+45
+90
+0
+	2: Right Seat View
+[add_camera_pax]
+0.967
+1.374
+1.554
+-0.06
+45
+-20
+0
+
+	3: Driver's View
+[add_camera_pax]
+0.836
+3.455
+1.852
+-0.06
+45
+-20
+0
+
+	4: Back Seat View
+[add_camera_pax]
+0
+-5.35
+2.6
+-0.06
+45
+0
+0
+
+
+
+	Folgender Befehl setzt die Standardfahrerkamera:
+
+[set_camera_std]
+3
+
+	Folgender Befehl setzt den Zentrierpunkt der Au?enkamera:
+
+[set_camera_outside_center]
+0
+0
+1.2
+
+
+
+	////////////////////////////////////////////////////////
+		Reflexionskameras *NEU01*
+	////////////////////////////////////////////////////////
+	
+[add_camera_reflexion_2]
+-1.348
+5.49768
+2.13474
+0
+52
+169
+-10
+0.15
+
+[add_camera_reflexion]
+1.4
+6.06375
+2.14318
+0
+52
+201
+-10
+
+[add_camera_reflexion]
+0.098922
+5.40614
+2.44145
+0
+52
+195
+-20
+
+[add_camera_reflexion_2]
+1.33136
+6.02872
+2.26738
+0
+61
+240
+-24
+0.15
+
+////////////////////////////////////////////////////////
+		ticket block attach points
+	////////////////////////////////////////////////////////	
+
+	Please mind: Nr.0 = ticket type 0, Nr.1 = ticket type 1 and so on.
+
+ticket type 0:
+
+[new_attachment]
+
+attach_rot_z
+-77.7981
+
+attach_trans
+-0.224705
+4.96321
+1.30786
+
+ticket type 1:
+
+[new_attachment]
+
+attach_rot_z
+-77.7981
+
+
+attach_trans
+-0.211555
+4.91915
+1.30786
+
+ticket type 2:
+
+[new_attachment]
+
+attach_rot_z
+-77.7981
+
+attach_trans
+-0.201692
+4.87707
+1.30786
+
+ticket type 3:
+
+[new_attachment]
+
+attach_rot_z
+-77.7981
+
+attach_trans
+-0.188541
+4.83302
+1.30786
+
+ticket type 4:
+
+[new_attachment]
+
+attach_rot_z
+-77.7981
+
+attach_trans
+-0.178021
+4.79619
+1.30786
+
+	////////////////////////////////////////////////////////
+		Physikalische und geometrische Grunddaten
+	////////////////////////////////////////////////////////
+
+	Masse in t:
+[mass]
+11.5
+
+	Trägheitsmomente um x, y und z-Achse, also Quer-, Längs- und Hochachse um den Schwerpunkt in dieser Reihenfolge in t*m^2:
+510
+205
+510
+
+[momentofintertia]
+600
+90
+400
+
+
+	Boundingbox des Busses *NEU01*
+	
+	Breite
+    Länge
+    Höhe
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Breitenachse in m (x)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Längsachse in m (y)
+    Abstand des Mittelpunkts der Boundingbox vom Nullpunkt des lokalen Koordinatensystems auf Hochachse in m (z) 
+
+[boundingbox]
+2.52
+12
+2.4
+0
+-0.35
+1.7
+
+	Höhe d. Schwerpunktes ueberm Boden:
+
+[schwerpunkt]
+0.9
+
+
+
+	Rollwiderstand (konstant, wird demnächst eventuell geändert) als Kraft in N
+[rollwiderstand]
+1545
+
+[rot_pnt_long]
+-2.66472
+
+[inv_min_turnradius]
+0.16
+
+[ai_deltaheight]
+-0.10
+
+	Front axle :
+
+[newachse]
+achse_long
+3.18772
+achse_maxwidth
+2.339
+achse_minwidth
+1.765
+achse_raddurchmesser
+0.953
+achse_feder
+240
+achse_maxforce
+90
+achse_daempfer
+20
+achse_antrieb
+0
+
+	Rear axle:
+
+[newachse]
+achse_long
+-2.66472
+achse_maxwidth
+2.36
+achse_minwidth
+1.086
+achse_raddurchmesser
+0.953
+achse_feder
+280
+achse_maxforce
+116
+achse_daempfer
+20
+achse_antrieb
+1

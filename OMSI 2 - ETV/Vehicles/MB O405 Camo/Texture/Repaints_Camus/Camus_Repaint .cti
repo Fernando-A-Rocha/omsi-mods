@@ -1,0 +1,55 @@
+************************************
+ETV
+************************************
+
+[item]
+ETV
+farbschema_tex1
+ETV\ETV.png
+
+************************************
+STCP
+************************************
+
+[item]
+STCP
+farbschema_tex1
+Camus_Ext_STCP.png
+
+************************************
+STCP Decomissioned
+************************************
+
+[item]
+STCP - Decomissioned
+farbschema_tex1
+Camus_Ext_STCP3.png
+
+[item]
+STCP - Decomissioned
+farbschema_tex3
+Camus_Ext_STCP3.png
+
+
+************************************
+STCP No Adverts
+************************************
+
+[item]
+STCP - No Adverts
+farbschema_tex1
+Camus_Ext_STCP2.png
+
+************************************
+STCP Decomissioned
+************************************
+
+[item]
+STCP - Decomissioned
+farbschema_tex1
+Camus_Ext_STCP3.png
+
+[item]
+STCP - Decomissioned
+farbschema_tex3
+Camus_Ext_STCP3.png

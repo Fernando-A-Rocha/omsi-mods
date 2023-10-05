@@ -1,0 +1,55 @@
+
+***************************************
+SST
+***************************************
+
+[item]
+SST
+farbschema_tex1
+C2E6_3T_Wagenkasten_SST.tga
+
+[setvar]
+Tuer2_IST_SST
+1
+
+[setvar]
+Tuer3_IST_SST
+1
+
+
+***************************************
+SST Tuer 2
+***************************************
+
+[item]
+SST Tuer 2
+farbschema_tex1
+C2E6_3T_Wagenkasten_SST_Tuer_2.tga
+
+[setvar]
+Tuer2_IST_SST
+1
+
+[setvar]
+Tuer3_IST_SST
+0
+
+
+***************************************
+SST Tuer 3
+***************************************
+
+[item]
+SST Tuer 3
+farbschema_tex1
+C2E6_3T_Wagenkasten_SST_Tuer_3.tga
+
+[setvar]
+Tuer2_IST_SST
+0
+
+[setvar]
+Tuer3_IST_SST
+1
+
+

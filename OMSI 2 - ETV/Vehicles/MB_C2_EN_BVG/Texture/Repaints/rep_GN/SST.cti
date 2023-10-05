@@ -1,0 +1,90 @@
+
+
+
+***************************************
+SST
+***************************************
+
+[item]
+SST
+farbschema_tex1_main
+C2E6_Wagenkasten_main_SST.tga
+
+[item]
+SST
+farbschema_tex1_trail
+C2E6_Wagenkasten_trail_SST.tga
+
+[item]
+SST
+farbschema_tex1_trail_Hybrid
+C2E6_Wagenkasten_Hybrid_trail_SST.tga
+
+[setvar]
+Tuer2_IST_SST
+1
+
+[setvar]
+Tuer3_IST_SST
+1
+
+
+***************************************
+SST Tuer 2
+***************************************
+
+[item]
+SST Tuer 2
+farbschema_tex1_main
+C2E6_Wagenkasten_main_SST.tga
+
+
+[item]
+SST Tuer 2
+farbschema_tex1_trail
+C2E6_Wagenkasten_trail.tga
+
+[item]
+SST Tuer 2
+farbschema_tex1_trail_Hybrid
+C2E6_Wagenkasten_Hybrid_trail.tga
+
+[setvar]
+Tuer2_IST_SST
+1
+
+[setvar]
+Tuer3_IST_SST
+0
+
+
+***************************************
+SST Tuer 3
+***************************************
+
+[item]
+SST Tuer 3
+farbschema_tex1_main
+C2E6_Wagenkasten_main.tga
+
+[item]
+SST Tuer 3
+farbschema_tex1_trail
+C2E6_Wagenkasten_trail_SST.tga
+
+[item]
+SST Tuer 3
+farbschema_tex1_trail_Hybrid
+C2E6_Wagenkasten_Hybrid_trail_SST.tga
+
+
+[setvar]
+Tuer2_IST_SST
+0
+
+[setvar]
+Tuer3_IST_SST
+1
+
+
+
