@@ -83,7 +83,6 @@
 {trigger:bus_doorfront1}
 '	Door operation does not require the station-brake switch.
 	(L.L.elec_busbar_main) 0 >
-	(L.L.velocity) 1 < &&
 	{if}
 		(M.L.trg_bus_dooraft23)
 	{endif}
@@ -99,7 +98,6 @@
 {trigger:bus_dooraft}
 '	Door operation does not require the station-brake switch.
 	(L.L.elec_busbar_main) 0 >
-	(L.L.velocity) 1 < &&
 	{if}
 		(M.L.trg_bus_dooraft45)
 	{endif}
@@ -118,7 +116,6 @@
 
 '	Door operation does not require the station-brake switch.
 	(L.L.elec_busbar_main) 0 >
-	(L.L.velocity) 1 < &&
 	{if}
 		(L.L.DEV_Mode) ! (S.L.DEV_Mode)
 	{endif}
