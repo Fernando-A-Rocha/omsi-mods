@@ -1,0 +1,2160 @@
+'##############
+'Engine Script
+'##############
+
+'		__/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\___________/\\\\\\\\\_        
+'		 _\/\\\///////////__\/\\\////////\\\______/\\\////////__       
+'		  _\/\\\_____________\/\\\______\//\\\___/\\\/___________      
+'		   _\/\\\\\\\\\\\_____\/\\\_______\/\\\__/\\\_____________     
+'		    _\/\\\///////______\/\\\_______\/\\\_\/\\\_____________    
+'		     _\/\\\_____________\/\\\_______\/\\\_\//\\\____________   
+'		      _\/\\\_____________\/\\\_______/\\\___\///\\\__________  
+'		       _\/\\\\\\\\\\\\\\\_\/\\\\\\\\\\\\/______\////\\\\\\\\\_ 
+'		        _\///////////////__\////////////___________\/////////__
+
+'Simulates basic engine behaviour, fuel cunsumption and cooling circuit
+
+'(c) 10.01.2011 R�diger H�lsmann
+'(c) 20.12.2011 Marcel Kuhnt
+'(c) 30.07.2015 Edit by Benedikt Steffens
+
+'Script Version: 1.0
+'Omsi release: 1.0
+
+'Needs:
+'- Antrieb
+'- Heizung
+'- Cockpit-Varlist
+'- Bremse (wegen Druckluftanlage)
+'- Elec
+
+
+'Revision History:
+'- Marcel Kuhnt		09.08.2009	Added Engine Failure
+'- Marcel Kuhnt		10.08.2009	Added Revision History
+'- R�diger H�lsmann	12.10.2009	Added possibility of idle speed control
+'- R�diger H�lsmann	11.05.2010	Added "E-Gas" function (throttle override by stop brake)
+'- R�diger H�lsmann	13.05.2010	Added engine temperature and cooling system
+'- R�diger H�lsmann	08.07.2010	Bugfix E-Gas
+'- R�diger H�lsmann	06.11.2010	Improved engine start and stop procedure 
+'- Marcel Kuhnt		09.11.2010	refueling included
+'- R�diger H�lsmann	21.11.2010	thermostat short circuit
+'- R�diger H�lsmann	22.11.2010	engine coolable by fan heaters
+'- R�diger H�lsmann	24.12.2010	optional ASR (traction control)
+'- R�diger H�lsmann	29.12.2010	ASR debugged
+'- R�diger H�lsmann	01.01.2011	ASR debugged again
+'- R�diger H�lsmann	05.01.2011	20h-switch E-Gas
+'- Marcel Kuhnt		07.01.2011	writing tank_percent variable
+'- R�diger H�lsmann	10.01.2011	Internal throttle set to 0 during shutdown
+'- Marcel Kuhnt		06.07.2011	Servo pump added
+'- Marcel Kuhnt		04.11.2011	Engine Shutoff Actuator Sound added
+'- Marcel Kuhnt		04.11.2011	Engine Shutoff works only with more than 3 bar in pressure circuit 4
+'- Marcel Kuhnt		30.11.2011	Engine Brake
+'- Marcel Kuhnt		20.12.2011	Engine Brake auf HH-Modell umgestellt
+'- Marcel Kuhnt		08.07.2012	Anlasser-Physik aus Golf-Script �bernommen
+'- Marcel Kuhnt		08.07.2012	Anlass-Grenzdrehzahl f�llt mit zunehmendem drehen des Motors ab
+'- Marcel Kuhnt		08.07.2012	�lviskosit�t eingebaut
+'- Marcel Kuhnt		09.07.2012	Auf neue Busbar-Logik angepasst
+'- R & M		11.07.2012	Drehzahlabh�ngiges Kaltmoment
+'- Marcel Kuhnt		03.11.2012	Motor braucht mindestens eine volle Umdrehung bei Mindestdrehzahl, damit er z�ndet
+'- Marcel Kuhnt		16.11.2013	Bugfix: Motor geht nicht mehr an, wenn Gang eingelegt
+
+'------------------------------------------------------------------------------------------
+
+
+'----------------------
+'	Trigger
+'----------------------
+
+{trigger:kw_m_engine_startbutton}
+	(L.L.engine_on) ! (L.L.antrieb_getr_gangwahl) 1 = (L.L.elec_busbar_main) 0.3 > && &&
+	(L.L.cp_SCRAM) ! &&
+	(L.L.Gear_selector) 0 = &&
+	{if}
+		
+		(L.L.AdBlue_lockup_active) 2 =
+		(L.L.cp_SCRAM) ||
+		{if}
+			0 (S.L.engine_injection_on)
+			1 (S.L.engine_starter)
+		{else}
+			1 (S.L.engine_starter) (S.L.engine_injection_on)
+		{endif}
+		
+		(T.L.ev_engine_starter)
+		
+	{endif}	
+	1 (S.L.cp_taster_anlasser)
+	(T.L.ev_VDV_toggle_on)
+{end}
+
+{trigger:kw_m_engine_startbutton_off}
+	0 (S.L.cp_taster_anlasser)
+	0 (S.L.engine_starter)
+	(T.L.ev_VDV_toggle_off)
+{end}
+
+{trigger:kw_m_enginestart}
+	(L.L.engine_starter_antirepeat) !
+	(L.L.cp_SCRAM) ! &&
+	{if}
+		(L.L.engine_on) !
+		{if}	
+			(L.L.Gear_selector) 0 =
+			(L.L.elec_busbar_main) 0.3 > &&
+			{if}
+				(L.L.AdBlue_lockup_active) 2 =
+				{if}
+					0 (S.L.engine_injection_on)
+					1 (S.L.engine_starter)
+					0 (S.L.engine_start_wrong_gear)
+				{else}
+					1 (S.L.engine_starter) (S.L.engine_injection_on)
+					0 (S.L.engine_start_wrong_gear)
+				{endif}
+				(T.L.ev_engine_starter)
+			{else}
+				1 (S.L.engine_start_wrong_gear)
+			{endif}	
+			1 (S.L.engine_starter_antirepeat)
+		{else}
+			(L.L.elec_busbar_main) (C.L.elec_busbar_minV) >
+			{if}
+				0 (S.L.engine_injection_on) (S.L.cp_key_rot)
+				(T.L.ev_engine_shutdown_actuator_on)
+				1 (S.L.engine_starter_antirepeat)
+			{endif}
+		{endif}
+	{endif}
+
+	1 (S.L.cp_taster_anlasser)
+
+	(T.L.ev_key_starter)
+{end}
+
+{trigger:kw_m_enginestart_off}
+'Sound kommt nur, wenn Abschaltung vorher an war:
+	(L.L.engine_injection_on)
+	{if}
+		(T.L.ev_engine_shutdown_actuator_off)
+	{endif}
+	
+		0 (S.L.cp_taster_motorabstellung) (S.L.cp_taster_anlasser) (S.L.engine_starter_antirepeat) (S.L.engine_starter) (L.L.engine_off_timer2_kurwa)
+	
+		(L.L.engine_off_timer_kurwa) (L.S.timegap) + 5 min (S.L.engine_off_timer_kurwa)
+		5 =
+		{if}
+			1 (S.L.engine_injection_on)
+			0 (L.L.engine_off_timer_kurwa)
+			0 (S.L.Oil_level_decreased_after_engine_Start)
+		{endif}
+	{endif}
+	
+	(T.L.ev_key_starter_off)
+{end}
+
+{trigger:kw_m_engineshutdown}
+	(L.L.elec_busbar_main) (C.L.elec_busbar_minV) > 
+	{if}
+		0 (S.L.engine_injection_on)
+		(T.L.ev_engine_shutdown_actuator_on)
+	{endif}
+	1 (S.L.cp_taster_motorabstellung)
+
+	(T.L.ev_VDV_toggle_on)
+{end}
+
+{trigger:kw_m_engineshutdown_off}
+'Sound kommt nur, wenn Abschaltung vorher an war:
+	(L.L.engine_injection_on) !
+	{if}
+		(T.L.ev_engine_shutdown_actuator_off)
+	{endif}
+
+	0 (S.L.cp_taster_motorabstellung)
+	1 (S.L.engine_injection_on)
+
+	(T.L.ev_VDV_toggle_off)
+{end}
+
+
+{trigger:tablet_debug_oil_plus}
+	(L.L.oil_level) 0.2 + (S.L.oil_level)
+{end}
+
+{trigger:tablet_debug_oil_minus}
+	(L.L.oil_level) 0.2 - (S.L.oil_level)
+{end}
+
+{trigger:tablet_debug_adblue_plus}
+	(L.L.AdBlue_level) 1 + (S.L.AdBlue_level)
+{end}
+
+{trigger:tablet_debug_adblue_minus}
+	(L.L.AdBlue_level) 1 - (S.L.AdBlue_level)
+{end}
+
+{trigger:tablet_debug_webasto_plus}
+	(L.L.webasto_tank_content) 1 + (S.L.webasto_tank_content)
+{end}
+
+{trigger:tablet_debug_webasto_minus}
+	(L.L.webasto_tank_content) 1 - (S.L.webasto_tank_content)
+{end}
+
+{trigger:tablet_debug_DPF_regen}
+	
+	(L.L.bremse_feststell)
+	(L.L.engine_n) 100 > &&
+	(L.L.Engine_DPF_state) 30 > &&
+	{if}
+		(L.L.Engine_DPF_Regen_Active) ! (S.L.Engine_DPF_Regen_Active)
+	{endif}
+
+{end}
+
+{trigger:tablet_debug_DPF_full}
+	160 (S.L.Engine_DPF_state)
+{end}
+
+{trigger:tablet_debug_malfunction_reset}
+	0 (S.L.oil_level_sensor_failed) (S.L.oil_pressure_sensor_failed) (S.L.oil_temperature_sensor_failed) (S.L.tank_sensor_failed)
+	0 (S.L.AdBlue_sensor_failed) (S.L.webasto_tank_sensor_failed) (S.L.vdv_fuckup) (S.L.vdv_asr2_timer)
+{end}
+
+{trigger:veh_tank}
+	(L.L.engine_tank_content) (L.S.Timegap) 3 * + (C.L.engine_tank_capacity) min (S.L.engine_tank_content)
+	(L.L.oil_level) (L.S.Timegap) 1 * + 10 min (S.L.oil_level)
+	(L.L.webasto_tank_content) (L.S.Timegap) 1 * + 40 min (S.L.webasto_tank_content)
+	(L.L.AdBlue_level) (L.S.Timegap) 0.84 * + 40 min (S.L.AdBlue_level)
+{end}
+
+{macro:engine_init}
+	50 200 random + (S.L.engine_tank_content)
+	(L.S.Weather_Temperature) (S.L.engine_temperature) (S.L.engine_temperature_envir) (S.L.engine_oil_temperature)
+	(C.L.engine_RPM_ign_cold) (S.L.engine_RPM_ign)
+
+	3 7 random + (S.L.oil_level)
+	12 12 random + (S.L.webasto_tank_content)
+	19 21 random + (S.L.AdBlue_level)
+	5 50 random + (S.L.Engine_DPF_state)
+
+	10 random 100 / (S.L.oil_consumption_base_multiplier)
+
+	1 (S.L.engine_knickschutz_eingriff)
+
+{end}
+
+{macro:engine_frame}
+
+' Engine preheating cycle
+' needs:
+'	- Electrics started up by at least 3s
+'	- Engine temperature to be below 20 C
+'	Preheat variable reports status = 0 off and ready / 1 running / 2 ready / 3 failed / 4 finished
+
+	(L.L.vdv_display_startuptime) 3.65 >
+	(L.L.engine_temperature) 18 < &&
+	(L.L.engine_n) 300 <= &&
+	(L.L.engine_preheat_done) ! &&
+	(L.L.visvar_equipment_is_CNG) ! &&
+	{if}
+		(L.L.engine_starter) !
+		{if}
+			(L.L.engine_preheat_timer) (L.S.Timegap) + 20 min (S.L.engine_preheat_timer)
+			(L.L.engine_preheat_timer) 20 <
+			{if}
+				(L.L.engine_temperature) (L.S.Timegap) 2 / + (S.L.engine_temperature)
+				1 (S.L.engine_preheat_running)
+			{else}
+				(L.L.engine_preheat_timer) 2 >
+				{if}
+					3 (S.L.engine_preheat_running)
+				{endif}
+			{endif}
+		{endif}
+	{else}
+		(L.L.engine_preheat_running) 1 =
+		(L.L.engine_temperature) 18 >= &&
+		(L.L.engine_n) 300 <= &&
+		{if}
+			2 (S.L.engine_preheat_running)
+			1 (S.L.engine_preheat_done)
+		{endif}
+	{endif}
+
+	(L.L.engine_preheat_done) 1 =
+	(L.L.vdv_display_startuptime) 3 > &&
+	{if}
+		(L.L.engine_preheat_notif_time) (L.S.Timegap) + 20 min (S.L.engine_preheat_notif_time)
+
+		(L.L.engine_preheat_notif_time) 20 =
+		{if}
+			4 (S.L.engine_preheat_running)
+		{endif}
+	{endif}
+
+	(L.L.engine_n) 300 >
+	{if}
+		4 (S.L.engine_preheat_running)
+	{endif}
+
+	(L.L.vdv_display_startuptime) 3 <
+	{if}
+		0 (S.L.engine_preheat_timer) (S.L.engine_preheat_running) (S.L.engine_preheat_notif_time) (S.L.engine_preheat_done)
+	{endif}
+
+' breakdown randomizer (MYSTERY BOX OWO WHATS INSIDE? OLDRUCK ZU NIEDRIG? UWU LOCK MY ENGINE UP SENPAI)
+
+	(L.L.elec_busbar_main_sw)
+	{if}
+		5 s2
+		300 s3
+	{else}
+		1 s2
+		80 s3
+	{endif}
+
+	(L.L.fixdown_timer) (L.S.Timegap) + 200 min (S.L.fixdown_timer)
+	l2 >=
+	{if}
+		l3 random (S.L.fixdown_random)
+		0 (S.L.fixdown_timer)
+	{endif}
+
+	(L.L.breakdown_timer) (L.S.Timegap) + 200 min (S.L.breakdown_timer)
+	(L.L.breakdown_timer) 90 >= 
+	{if}
+		(L.S.Year) (L.L.visvar_equipment_manufacture_year) - 0 max (F.L.breakdown_multiplier) s4
+		1024 l4 * trunc s5
+		l5 random (S.L.breakdown_random)
+		0 (S.L.breakdown_timer)
+	{endif}
+
+	(L.L.breakdown_random) s0
+	(L.L.fixdown_random) s1
+
+' ID 1		Wysoka temperatura plynu chlodzacego
+'		DYNAMIC
+
+' ID 2		Niski poziom chlodziwa
+'		STATIC
+
+	l0 1 = {if} 1 (S.L.Fail_Coolant_true) {endif}
+	l1 1 = {if} 0 (S.L.Fail_Coolant_true) {endif}
+
+' ID 3		Cisnienie oleju zbyt niskie
+'		STATIC & DYNAMIC
+
+	l0 2 = {if} 1 (S.L.oil_pressure_sensor_failed) {endif}
+	l1 2 = {if} 0 (S.L.oil_pressure_sensor_failed) {endif}
+
+' ID 4		Awaria Sterowania silnika
+'		STATIC
+
+	l0 3 = {if} 1 (S.L.Fail_EDC_AccelContr_true) {endif}
+	l1 3 =	{if} 0 (S.L.Fail_EDC_AccelContr_true) {endif}
+
+' ID 5		Usterka chlodzenia silnika
+'		SEMI-STATIC
+
+	l0 5 = {if} 1 (S.L.Fail_Hydrostat_true) {endif}
+	l1 5 =	{if} 0 (S.L.Fail_Hydrostat_true) {endif}
+
+' ID 6		Wysoka temperatura oleju
+'		DYNAMIC
+
+' ID 7		Usterka czujnika cisnienia doladowania
+'		SEMI-STATIC
+
+	l0 6 = {if} 2 (S.L.Fail_EDC_AccelContr_true) {endif}
+	l1 6 =	{if} 0 (S.L.Fail_EDC_AccelContr_true) {endif}
+
+' ID 8		Sprawdzic poziom oleju
+'		STATIC & DYNAMIC
+
+	l0 7 = {if} 1 (S.L.oil_level_sensor_failed) {endif}
+	l1 7 =	{if} 0 (S.L.oil_level_sensor_failed) {endif}
+
+' ID 9		Awaria alternator
+'		STATIC
+
+	l0 8 = {if} 1 (S.L.Fail_Alternator_true) {endif}
+	l1 8 =	{if} 0 (S.L.Fail_Alternator_true) {endif}
+
+' ID 10		Rozzarzanie
+'		DYNAMIC
+
+' ID 11		Rozzarzanie Ponow
+'		DYNAMIC
+
+' ID 12		URUCHOM SILNIK
+'		DYNAMIC
+
+' ID 13		Cisnienie CNG nieprawidlowe
+'		STATIC
+
+	l0 9 = {if} 1 (S.L.Fail_FPS_true) {endif}
+	l1 9 =	{if} 0 (S.L.Fail_FPS_true) {endif}
+
+' ID 14		Zapas cisnienia zbyt niski
+'		DYNAMIC
+
+	l0 10 = {if} 1 (S.L.pressure_sensors_failed) {endif}
+	l1 10 =	{if} 0 (S.L.pressure_sensors_failed) {endif}
+
+' ID 15		KSM Diagnoza 05519-02
+'		STATIC
+
+	l0 11 = {if} 1 (S.L.Fail_KSM_true) {endif}
+	l1 11 =	{if} 0 (S.L.Fail_KSM_true) {endif}
+
+' ID 16		123 Diagnoza 08133-03
+'		STATIC
+
+	l0 12 = {if} 1 (S.L.Fail_123_true) {endif}
+	l1 12 =	{if} 0 (S.L.Fail_123_true) {endif}
+
+' ID 17		Czujnik zmierzchu bez funkcji
+'		STATIC
+
+	l0 13 = {if} 1 (S.L.Fail_Twilight_true) {endif}
+	l1 13 =	{if} 0 (S.L.Fail_Twilight_true) {endif}
+
+' ID 18		Kat przegubu wysoki
+'		DYNAMIC
+
+' ID 19		Usterka ochrony przegubu
+'		STATIC
+
+	l0 14 = {if} 1 (S.L.Fail_Gelenk_true) {endif}
+	l1 14 =	{if} 0 (S.L.Fail_Gelenk_true) {endif}
+
+' ID 20		ABS Diagnoza 03500-01
+'		STATIC & DYNAMIC
+' ID 21		ASR Diagnoza 03516-02
+'		STATIC & DYNAMIC
+
+	l0 15 = {if} 2 (S.L.Fail_ABSASR_true) {endif}
+	l0 16 = {if} 3 (S.L.Fail_ABSASR_true) {endif}
+	l0 17 = {if} 4 (S.L.Fail_ABSASR_true) {endif}
+	l0 18 = {if} 5 (S.L.Fail_ABSASR_true) {endif}
+	l0 19 = {if} 1 (S.L.Fail_ABSASR_true) {endif}
+	l0 20 = {if} 2 (S.L.Fail_ABSASR_true) {endif}
+
+	l1 15 >=
+	l1 20 <= &&
+	{if}
+		0 (S.L.Fail_ABSASR_true)
+	{endif}
+
+' ID 22		EBS Diagnoza 04004-03
+'		STATIC & DYNAMIC
+
+	l0 21 = {if} 1 (S.L.Fail_EBS_true) {endif}
+	l1 21 =	{if} 0 (S.L.Fail_EBS_true) {endif}
+
+' ID 23		Konieczna wymiana klockow hamulcowych
+'		STATIC
+
+	l0 22 = {if} 1 (S.L.Fail_BrakeLining_true) {endif}
+	l1 22 =	{if} 0 (S.L.Fail_BrakeLining_true) {endif}
+
+' ID 24		Usterka sygnalu predkosci
+'		STATIC & DYNAMIC
+
+	l0 23 = {if} 1 (S.L.Fail_VelocSensor_true) {endif}
+	l1 23 = {if} 0 (S.L.Fail_VelocSensor_true) {endif}
+
+	l0 24 = {if} 1 (S.L.Fail_VelocSensor_Interf_true) {endif}
+	l1 24 = {if} 0 (S.L.Fail_VelocSensor_Interf_true) {endif}
+
+' ID 25		EBS Diagnoza 03557-04
+'		STATIC
+
+	l0 25 = {if} 2 (S.L.Fail_EBS_true) {endif}
+	l1 25 =	{if} 0 (S.L.Fail_EBS_true) {endif}
+
+' ID 26		Awaryjne zwolnienie hamulca przystankowego
+'		DYNAMIC
+
+' ID 27		INFO Skontroluj uklad centralnego smarowania
+'		STATIC
+
+	l0 26 = {if} 1 (S.L.Fail_MUX_true) {endif}
+	l1 26 =	{if} 0 (S.L.Fail_MUX_true) {endif}
+
+' ID 28		Pierwsze dopuszczenie niewprowadzone
+'		STATIC
+
+	l0 27 = {if} 1 (S.L.Fail_AVSEPS_true) {endif}
+	l1 27 =	{if} 0 (S.L.Fail_AVSEPS_true) {endif}
+
+' ID 29		Awaria drzwi 1 otwarcie awaryjne
+'		DYNAMIC
+
+' ID 30		Awaria drzwi 2 otwarcie awaryjne
+'		DYNAMIC
+
+' ID 31		Awaria drzwi 3 otwarcie awaryjne
+'		DYNAMIC
+
+' ID 32		Awaria drzwi 4 otwarcie awaryjne
+'		DYNAMIC
+
+' ID 33		Awaria drzwi 5 otwarcie awaryjne
+'		DYNAMIC
+
+' ID 34		Brak komunikacji z tachografem
+'		STATIC
+
+	l0 28 = {if} 1 (S.L.Fail_TCO_true) {endif}
+	l1 28 =	{if} 0 (S.L.Fail_TCO_true) {endif}
+
+' ID 35		Sprawdzic tachograf
+'		STATIC
+
+	l0 29 = {if} 2 (S.L.Fail_TCO_true) {endif}
+	l1 29 =	{if} 0 (S.L.Fail_TCO_true) {endif}
+
+' ID 36		Wymienic filtr powietrza
+'		STATIC
+
+	l0 30 = {if} 1 (S.L.Fail_FuelFilter_true) {endif}
+	l1 30 =	{if} 0 (S.L.Fail_FuelFilter_true) {endif}
+
+' ID 37		Predkosc obrotowa silnika zbyt wysoka
+'		DYNAMIC
+
+' ID 38		Zaciagnac hamulec postojowy
+'		DYNAMIC
+
+' ID 39		AdBlue! Moc zredukowana
+'		STATIC
+
+	l0 31 = {if} 1 (S.L.AdBlue_sensor_failed) {endif}
+	l1 31 =	{if} 0 (S.L.AdBlue_sensor_failed) {endif}
+
+' ID 40		TBM niedostepny
+'		STATIC
+
+	l0 32 = {if} 1 (S.L.Fail_FSS_true) {endif}
+	l1 32 =	{if} 0 (S.L.Fail_FSS_true) {endif}
+
+' ID 41		ZBR Diagnoza 04314-02
+'		STATIC
+
+	l0 33 = {if} 1 (S.L.Fail_ZBR_true) {endif}
+	l1 33 =	{if} 0 (S.L.Fail_ZBR_true) {endif}
+
+' ID 42		ECAS Diagnoza 06041-01
+'		STATIC
+
+	l0 34 = {if} 1 (S.L.Fail_ECAS_true) {endif}
+	l1 34 =	{if} 0 (S.L.Fail_ECAS_true) {endif}
+
+' ID 43		EDC Diagnoza 08101-09
+'		STATIC
+
+	l0 35 = {if} 1 (S.L.Fail_EDC_true) {endif}
+	l1 35 =	{if} 0 (S.L.Fail_EDC_true) {endif}
+
+' ID 44		Usterka oczyszczania spalin
+'		STATIC
+
+	l0 36 = {if} 1 (S.L.Fail_SCR_true) {endif}
+	l1 36 =	{if} 0 (S.L.Fail_SCR_true) {endif}
+
+' ID 45		Ogrzewanie/Klimatyzacja Usterka
+'		STATIC
+'	Fault IDs:
+'	1 - HLK no thermostat
+'	2 - HLK no AC
+'	3 - HLK no AC heat pump
+'	4 - HLK no auto webasto + no ext temp reading
+
+	l0 37 = {if} 1 (S.L.Fail_HVAC_true) {endif}
+	l1 37 =	{if} 0 (S.L.Fail_HVAC_true) {endif}
+
+	l0 38 = {if} 2 (S.L.Fail_HVAC_true) {endif}
+	l1 38 =	{if} 0 (S.L.Fail_HVAC_true) {endif}
+
+	l0 39 = {if} 3 (S.L.Fail_HVAC_true) {endif}
+	l1 39 =	{if} 0 (S.L.Fail_HVAC_true) {endif}
+
+	l0 40 = {if} 4 (S.L.Fail_HVAC_true) {endif}
+	l1 40 =	{if} 0 (S.L.Fail_HVAC_true) {endif}
+
+' ID 46		Usterka ogrzewania dodatkowego
+'		STATIC
+
+	l0 41 = {if} 1 (S.L.Fail_webasto_true) {endif}
+	l1 41 =	{if} 0 (S.L.Fail_webasto_true) {endif}
+
+	l0 42 = {if} 1 (S.L.webasto_tank_sensor_failed) {endif}
+	l1 42 =	{if} 0 (S.L.webasto_tank_sensor_failed) {endif}
+
+' ID 47		Wysoka temperatura skrzyni biegow
+'		DYNAMIC
+
+' ID 48		Przestaw skrzynie w polozenie NEUTRALNE
+'		DYNAMIC
+
+' ID 49		Usterka skrzyni biegow
+'		STATIC
+
+	l0 43 = {if} 1 (S.L.Fail_Getriebe_true) {endif}
+	l1 43 =	{if} 0 (S.L.Fail_Getriebe_true) {endif}
+
+' ID 50		Moc retardera zredukowana
+'		DYNAMIC
+
+	l0 44 = {if} 2 (S.L.Fail_Getriebe_true) {endif}
+	l1 44 =	{if} 0 (S.L.Fail_Getriebe_true) {endif}
+
+' ID 51		INFO Brak poziomu jazdy
+'		DYNAMIC
+
+' ID 52		Usterka zawieszenia pneumatycznego
+'		STATIC
+
+	l0 45 = {if} 2 (S.L.Fail_ECAS_true) {endif}
+	l1 45 =	{if} 0 (S.L.Fail_ECAS_true) {endif}
+
+' ID 53		Usterka detekcji pozaru
+'		STATIC
+
+	l0 46 = {if} 1 (S.L.Fail_Fire_true) {endif}
+	l1 46 =	{if} 0 (S.L.Fail_Fire_true) {endif}
+
+' ID 54		Usterka glownego komputera pojazdu
+'		STATIC
+
+	l0 47 = {if} 1 (S.L.Fail_FFR_true) {endif}
+	l1 47 =	{if} 0 (S.L.Fail_FFR_true) {endif}
+
+' ID 55		Usterka sterowania dodatkowego
+'		STATIC
+
+	l0 48 = {if} 1 (S.L.Fail_Filter_true) {endif}
+	l1 48 =	{if} 0 (S.L.Fail_Filter_true) {endif}
+
+' ID 56		Usterka czujnika poziomu paliwa
+'		STATIC
+
+	l0 49 = {if} 1 (S.L.tank_sensor_failed) {endif}
+	l1 49 =	{if} 0 (S.L.tank_sensor_failed) {endif}
+
+' ID 57		Napiecie zbyt niskie
+'		DYNAMIC
+
+' ID 58		Zbliza sie termin seriwsu
+'		STATIC
+
+	l0 50 = {if} 1 (S.L.Fail_Lubrication_true) {endif}
+	l1 50 =	{if} 0 (S.L.Fail_Lubrication_true) {endif}
+
+' ID 59		Niski poziom paliwa
+'		DYNAMIC
+
+' ID 60		Ryzyko oblodzenia
+'		DYNAMIC
+
+' ID 61		Awaria swiatel mijania
+' ID 62		Awaria swiatel drogowych
+' ID 63		Awaria swiatel p.-mglowych przod
+' ID 64		Awaria swiatel p.-mglowych tyl
+' ID 65		Awaria swiatel hamowania
+' ID 66		Awaria swiatel pozycyjnych przod
+' ID 67		Awaria swiatel pozycyjnych tyl
+'		DYNAMIC
+
+'	1 - Abbl L
+'	2 - Abbl R
+'	3 - Stand Vorn L
+'	4 - Stand Vorn R
+'	5 - Nebel Vorn L
+'	6 - Nebel Vorn R
+'	7 - Fern L
+'	8 - Fern R
+'	9 - Nebel Hinten L
+'	10 - Nebel Hinten R
+'	11 - Brems L
+'	12 - Brems R
+'	13 - Stand Oben Hinten L
+'	14 - Stand Oben Hinten R
+
+	(L.L.Fail_Lighting_true) 0 =
+	{if}
+		l0 51 = {if} 1 (S.L.Fail_Lighting_true) {endif}
+		l0 52 = {if} 2 (S.L.Fail_Lighting_true) {endif}
+		l0 53 = {if} 3 (S.L.Fail_Lighting_true) {endif}
+		l0 54 = {if} 4 (S.L.Fail_Lighting_true) {endif}
+		l0 55 = {if} 5 (S.L.Fail_Lighting_true) {endif}
+		l0 56 = {if} 6 (S.L.Fail_Lighting_true) {endif}
+		l0 57 = {if} 7 (S.L.Fail_Lighting_true) {endif}
+		l0 58 = {if} 8 (S.L.Fail_Lighting_true) {endif}
+		l0 59 = {if} 9 (S.L.Fail_Lighting_true) {endif}
+		l0 60 = {if} 10 (S.L.Fail_Lighting_true) {endif}
+		l0 61 = {if} 11 (S.L.Fail_Lighting_true) {endif}
+		l0 62 = {if} 12 (S.L.Fail_Lighting_true) {endif}
+		l0 63 = {if} 13 (S.L.Fail_Lighting_true) {endif}
+		l0 64 = {if} 14 (S.L.Fail_Lighting_true) {endif}
+	{endif}
+
+	l1 51 >= l1 64 <= && {if} 0 (S.L.Fail_Lighting_true) {endif}
+
+' ID 68		Sprawdz cisnienie opon
+'		STATIC
+
+	l0 65 = {if} 1 (S.L.Fail_BrakeFluid_true) {endif}
+	l1 65 =	{if} 0 (S.L.Fail_BrakeFluid_true) {endif}
+
+' ID 69		TPMS Diagnoza 02051-04
+'		STATIC
+
+	l0 66 = {if} 2 (S.L.Fail_BrakeFluid_true) {endif}
+	l1 66 =	{if} 0 (S.L.Fail_BrakeFluid_true) {endif}
+
+' ID 70		Test swiatel
+'		DYNAMIC
+
+' ID 71		Test swiatel zakonczony
+'		DYNAMIC
+
+' ID 72		Test swiatel przerwany
+'		DYNAMIC
+
+' ID 73		FFR Diagnoza 02039-03
+'		STATIC
+
+	l0 67 = {if} 1 (S.L.Fail_Dachluk_true) {endif}
+	l1 67 =	{if} 0 (S.L.Fail_Dachluk_true) {endif}
+
+' ID 74		Usterka akumulatora energii
+'		STATIC
+
+	l0 68 = {if} 1 (S.L.Fail_Sensorik_true) {endif}
+	l1 68 =	{if} 0 (S.L.Fail_Sensorik_true) {endif}
+
+' ID 75		Awaria ukladu hybrydowego
+'		STATIC
+
+	l0 69 = {if} 2 (S.L.Fail_Sensorik_true) {endif}
+	l1 69 =	{if} 0 (S.L.Fail_Sensorik_true) {endif}
+
+
+
+' oil level sensor logic
+	(L.L.vis_equipment_oil_level_sensor) 1 =
+	{if}
+		(L.L.oil_level_sensor_failed) 1 =
+		{if}
+			0 (S.L.oil_level_sensor)
+		{else}
+			(L.L.oil_level) (S.L.oil_level_sensor)
+		{endif}
+	{endif}
+
+	(L.L.coolant_temperature_sensor_failed) 1 =
+	{if}
+		0 (S.L.coolant_temperature_sensor)
+	{else}
+		(L.L.engine_temperature) (S.L.coolant_temperature_sensor)
+	{endif}
+
+	(L.L.oil_pressure_sensor_failed) 1 =
+	{if}
+		0 (S.L.oil_pressure_sensor)
+	{else}
+		(L.L.engine_oil_pressure) 10 * trunc 10 / (S.L.oil_pressure_sensor)
+	{endif}
+
+	(L.L.oil_temperature_sensor_failed) 1 =
+	{if}
+		0 (S.L.oil_temperature_sensor)
+	{else}
+		(L.L.engine_oil_temperature) (S.L.oil_temperature_sensor)
+	{endif}
+
+	(L.L.tank_sensor_failed) 1 =
+	{if}
+		0 (S.L.tank_sensor)
+	{else}
+		(L.L.engine_tank_content) (S.L.tank_sensor)
+	{endif}
+
+	(L.L.AdBlue_sensor_failed) 1 =
+	{if}
+		0 (S.L.AdBlue_sensor)
+	{else}
+		(L.L.AdBlue_level) (S.L.AdBlue_sensor)
+	{endif}
+
+	(L.L.visvar_equipment_DPF_AdBlue_True) 
+	(L.L.visvar_equipment_AdBlue_True) ||
+	{if}
+		(L.L.AdBlue_level) 0.5 <=
+		(L.L.engine_n) 300 > &&
+		{if}
+			1 (S.L.AdBlue_lockup_active)
+		{else}
+			(L.L.AdBlue_level) 0.5 <=
+			(L.L.engine_n) 300 < &&
+			{if}
+				2 (S.L.AdBlue_lockup_active)
+				0 (S.L.engine_injection_on)
+			{else}
+				(L.L.AdBlue_level) 0.5 >=
+				{if}
+					0 (S.L.AdBlue_lockup_active)
+				{endif}
+			{endif}
+		{endif}
+	{endif}
+	
+	(L.L.visvar_equipment_AdBlue_True) !
+	{if}
+		0 (S.L.AdBlue_lockup_active)
+	{endif}
+
+
+' oil pressure calc
+	(L.L.engine_n) (F.L.cockpit_oeldruck) 
+	(L.L.engine_oil_press_breakdown) -
+	(L.L.engine_throttle_injection) +
+	(L.L.engine_oil_temperature) (F.L.cockpit_oeldruck_x_temperature) +
+	(L.L.oil_level) (F.L.cockpit_oeldruck_x_oelstand) * s0
+	(L.L.engine_oil_pressure) s1
+	2.2 s2
+	0.9 s3
+	(M.L.engine_traegheit)
+	l1 (S.L.engine_oil_pressure)
+
+' oil consumption (on start)
+	(L.L.engine_starter)
+	(L.L.Oil_level_decreased_after_engine_Start) ! &&
+	{if}
+		3 random 10 / (S.L.Oil_level_decrease)
+		(L.L.oil_level) (L.L.Oil_level_decrease) - (S.L.oil_level)
+		1 (S.L.Oil_level_decreased_after_engine_Start)
+	{endif}
+
+' oil consumption
+	(L.L.engine_n)
+	{if}
+		(L.L.engine_n) (F.L.cockpit_oeldruck_cons) (S.L.oil_consumption_nominal)
+		(L.L.oil_consumption_nominal) (L.L.oil_consumption_base_multiplier) + (L.L.oil_consumption_breakdown_multiplier) + 1000 / /-/ (L.S.Timegap) * (L.L.oil_level) + 0 max (S.L.oil_level)
+	{endif}
+
+' oil temperature
+	(L.L.engine_temperature) (L.L.engine_oil_temperature) - (F.L.cockpit_oeldruck_engine_temp_rate) 
+	(L.S.Weather_Temperature) (L.L.engine_oil_temperature) - (F.L.cockpit_oeldruck_weather_temp_rate) +
+	(L.L.engine_n) (F.L.cockpit_oeltemp_x_engine_rates) +
+	(L.L.engine_oil_temperature) (F.L.cockpit_oel_cooling) + 4 /
+	(L.S.Timegap) * (L.L.engine_oil_temperature) + (S.L.engine_oil_temperature)
+
+' AdBlue consumption
+
+	(L.L.engine_consumption_h) 3600 / 20 /
+	(L.L.Engine_DPF_Regen_Active) 1000 / + /-/
+	(L.S.Timegap) * (L.L.AdBlue_level) + 0 max (S.L.AdBlue_level)
+
+' DPF temperature calc
+
+	(L.L.visvar_equipment_DPF_AdBlue_True)
+	(L.L.Fail_EDC_AccelContr_true) 1 = ! &&
+	(L.L.Fail_EDC_AccelContr_true) 2 = ! &&
+	(L.L.breakdown_46_true) 3 = ! &&
+	(L.L.breakdown_46_true) 4 = ! &&
+	{if}
+		(L.L.engine_temperature) (L.L.Engine_DPF_temperature) - (F.L.cockpit_DPF_x_engine_temp_rate) 
+		(L.S.Weather_Temperature) (L.L.Engine_DPF_temperature) - (F.L.cockpit_DPF_x_weather_temp_rate) +
+		(L.L.engine_n) (F.L.cockpit_oeldruck_cons) +
+		(L.L.Engine_DPF_temperature) (F.L.cockpit_DPF_cooling_rate) +
+		(L.L.Engine_DPF_Regen_Active) (F.L.cockpit_DPF_regen_rate) 20 * + 10 /
+		(L.S.Timegap) * (L.L.Engine_DPF_temperature) + (S.L.Engine_DPF_temperature)
+
+' DPF calc
+
+		(L.L.engine_n) 100 >
+		{if}
+			(L.L.engine_n) (F.L.cockpit_DPF_x_engine_n_rate) 20000 /
+			(L.L.engine_throttle_injection) (F.L.cockpit_DPF_regen_rate) +
+			(L.L.Engine_DPF_temperature) (F.L.cockpit_DPF_burnout_rate) 10 / + 10 /
+			(L.S.Timegap) * (L.L.Engine_DPF_state) + 0 max 160 min (S.L.Engine_DPF_state)
+		{endif}
+
+' DPF regen conditions
+
+' DPF automatic regen
+' 0 - off 1 - standby 2 - active 3 - aborted 4 - finished
+
+		(L.L.Engine_DPF_state) 100 >=
+		(L.L.velocity) 30 >= &&
+		(L.L.coolant_temperature_sensor) 60 >= &&
+		(L.L.engine_n) 300 >= &&
+		(L.L.Engine_DPF_stationary_regen) ! &&
+		{if}
+			1 (S.L.Engine_DPF_mobile_regen)
+			0 (S.L.Engine_DPF_mobile_regen_timer) (S.L.Engine_DPF_mobile_regen_stdby)
+		{else}
+			(L.L.Engine_DPF_state) 30 <
+			(L.L.engine_n) 300 < ||
+			(L.L.coolant_temperature_sensor) 60 < ||
+			(L.L.Engine_DPF_stationary_regen) ||
+			{if}
+				0 (S.L.Engine_DPF_mobile_regen) (S.L.Engine_DPF_mobile_regen_timer) (S.L.Engine_DPF_mobile_regen_stdby)
+			{else}
+				(L.L.velocity) 8 <
+				{if}
+					(L.L.Engine_DPF_mobile_regen_timer) (L.S.Timegap) + 180 min (S.L.Engine_DPF_mobile_regen_timer)
+					(L.L.Engine_DPF_mobile_regen_timer) 180 >=
+					{if}
+						0 (S.L.Engine_DPF_mobile_regen) (S.L.Engine_DPF_mobile_regen_stdby)
+					{else}
+						1 (S.L.Engine_DPF_mobile_regen_stdby)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.Engine_DPF_state) 30 <
+		(L.L.engine_n) 300 < ||
+		(L.L.coolant_temperature_sensor) 40 < ||
+		{if}
+			0 (S.L.Engine_DPF_stationary_regen) (S.L.Engine_DPF_mobile_regen_stdby)
+		{endif}
+
+' DPF
+
+		(L.L.Engine_DPF_mobile_regen) 1 >=
+		(L.L.Engine_DPF_stationary_regen) 1 = ||
+		{if}
+			1 (S.L.Engine_DPF_Regen_Active)
+		{else}
+			0 (S.L.Engine_DPF_Regen_Active) (S.L.Engine_DPF_mobile_regen_stdby)
+		{endif}
+	{else}
+		0 (S.L.Engine_DPF_Regen_Active) (S.L.Engine_DPF_stationary_regen) (S.L.Engine_DPF_mobile_regen) (S.L.Engine_DPF_mobile_regen_stdby)
+	{endif}
+
+' other useless shit
+
+'		D2866 Euro III
+	(L.L.vis_engine_type) 0 =
+	(L.L.vis_engine_type) 1 = ||
+	{if}
+		2005 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		3 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		0 (S.L.visvar_equipment_AdBlue_True)
+		0 (S.L.visvar_equipment_DPF_AdBlue_True) (S.L.Engine_DPF_state)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 2 =
+	(L.L.vis_engine_type) 3 = ||
+	{if}
+		2007 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		4 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		0 (S.L.visvar_equipment_AdBlue_True)
+		0 (S.L.visvar_equipment_DPF_AdBlue_True) (S.L.Engine_DPF_state)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 4 =
+	(L.L.vis_engine_type) 5 = ||
+	{if}
+		2009 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		5 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		0 (S.L.visvar_equipment_AdBlue_True)
+		0 (S.L.visvar_equipment_DPF_AdBlue_True) (S.L.Engine_DPF_state)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 6 =
+	{if}
+		2012 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		55 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		0 (S.L.visvar_equipment_AdBlue_True)
+		0 (S.L.visvar_equipment_DPF_AdBlue_True) (S.L.Engine_DPF_state)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 7 =
+	{if}
+		2016 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		6 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		1 (S.L.visvar_equipment_AdBlue_True) (S.L.visvar_equipment_DPF_AdBlue_True)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 8 =
+	(L.L.vis_engine_type) 9 = ||
+	{if}
+		2018 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		55 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		1 (S.L.visvar_equipment_is_diesel)
+		1 (S.L.visvar_equipment_AdBlue_True)
+		1 (S.L.visvar_equipment_DPF_AdBlue_True) (S.L.Engine_DPF_state)
+		0 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.vis_engine_type) 10 >=
+	{if}
+		2015 (S.L.visvar_equipment_manufacture_year)
+		2 (S.L.visvar_equipment_Alternator_count)
+		6 (S.L.visvar_equipment_euro_norm)
+		
+		1 (S.L.vis_equipment_oil_level_sensor)
+		0 (S.L.visvar_equipment_is_diesel)
+		0 (S.L.visvar_equipment_AdBlue_True) (S.L.visvar_equipment_DPF_AdBlue_True)
+		1 (S.L.visvar_equipment_is_CNG)
+		0 (S.L.visvar_equipment_is_FCEV) (S.L.visvar_equipment_is_electric) (S.L.visvar_equipment_is_hybrid)
+	{endif}
+
+	(L.L.visvar_engine_type) 0 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_0)
+	{else}
+		0 (S.L.engine_n_var_0)
+	{endif}
+
+	(L.L.visvar_engine_type) 1 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_1)
+	{else}
+		0 (S.L.engine_n_var_1)
+	{endif}
+
+	(L.L.visvar_engine_type) 2 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_2)
+	{else}
+		0 (S.L.engine_n_var_2)
+	{endif}
+
+	(L.L.visvar_engine_type) 3 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_3)
+	{else}
+		0 (S.L.engine_n_var_3)
+	{endif}
+
+	(L.L.visvar_engine_type) 4 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_4)
+	{else}
+		0 (S.L.engine_n_var_4)
+	{endif}
+
+	(L.L.visvar_engine_type) 5 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_5)
+	{else}
+		0 (S.L.engine_n_var_5)
+	{endif}
+
+	(L.L.visvar_engine_type) 6 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_6)
+	{else}
+		0 (S.L.engine_n_var_6)
+	{endif}
+
+	(L.L.visvar_engine_type) 8 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_8)
+	{else}
+		0 (S.L.engine_n_var_8)
+	{endif}
+
+	(L.L.visvar_engine_type) 7 =
+	(L.L.visvar_engine_type) 9 = ||
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_9)
+	{else}
+		0 (S.L.engine_n_var_9)
+	{endif}
+
+	(L.L.visvar_engine_type) 10 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_10)
+	{else}
+		0 (S.L.engine_n_var_10)
+	{endif}
+
+	(L.L.visvar_engine_type) 11 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_11)
+	{else}
+		0 (S.L.engine_n_var_11)
+	{endif}
+
+	(L.L.visvar_engine_type) 12 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_12)
+	{else}
+		0 (S.L.engine_n_var_12)
+	{endif}
+
+	(L.L.visvar_engine_type) 13 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_13)
+	{else}
+		0 (S.L.engine_n_var_13)
+	{endif}
+
+	(L.L.visvar_engine_type) 14 =
+	(L.L.visvar_engine_type) 15 = ||
+	(L.L.visvar_engine_type) 16 = ||
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_16)
+	{else}
+		0 (S.L.engine_n_var_16)
+	{endif}
+
+	(L.L.visvar_engine_type) 17 =
+	{if}
+		(L.L.engine_n) (S.L.engine_n_var_17)
+	{else}
+		0 (S.L.engine_n_var_17)
+	{endif}
+
+	(L.L.visvar_equipment_DPF_AdBlue_randomized_kurwa) 3 <
+	{if}
+		(L.L.visvar_equipment_DPF_AdBlue_True)
+		{if}
+			160 random (S.L.Engine_DPF_state)
+		{endif}
+
+		(L.L.visvar_equipment_AdBlue_True)
+		{if}
+			10 30 random + (S.L.AdBlue_level)
+		{else}
+			40 (S.L.AdBlue_level)
+		{endif}
+		(L.L.visvar_equipment_DPF_AdBlue_randomized_kurwa) 1 + (S.L.visvar_equipment_DPF_AdBlue_randomized_kurwa)
+	{endif}
+
+	
+	(L.L.Fail_EDC_AccelContr_true) 1 = !
+	(L.L.Fail_EDC_AccelContr_true) 2 = ! &&
+	(L.L.breakdown_46_true) 4 = ! &&
+	{if}
+		(L.L.vis_engine_HP_output) !
+		{if}
+' 220 PS
+		1.18 (S.L.visvar_engine_HP_output)
+		{else}
+			(L.L.vis_engine_HP_output) 1 =
+			{if}
+' 230 PS
+			1.19 (S.L.visvar_engine_HP_output)
+			{else}
+				(L.L.vis_engine_HP_output) 2 =
+				{if}
+' 240 PS
+				1.20 (S.L.visvar_engine_HP_output)
+				{else}
+					(L.L.vis_engine_HP_output) 3 =
+					{if}
+' 250 PS
+					1.25 (S.L.visvar_engine_HP_output)
+					{else}
+						(L.L.vis_engine_HP_output) 4 =
+						{if}
+' 260 PS
+						1.3 (S.L.visvar_engine_HP_output)
+						{else}
+							(L.L.vis_engine_HP_output) 5 =
+							{if}
+' 270 PS
+							1.35 (S.L.visvar_engine_HP_output)
+							{else}
+								(L.L.vis_engine_HP_output) 6 =
+								{if}
+' 280 PS
+								1.4 (S.L.visvar_engine_HP_output)
+								{else}
+									(L.L.vis_engine_HP_output) 7 =
+									{if}
+' 290 PS
+									1.45 (S.L.visvar_engine_HP_output)
+									{else}
+										(L.L.vis_engine_HP_output) 8 =
+										{if}
+' 310 PS
+										1.55 (S.L.visvar_engine_HP_output)
+										{else}
+											(L.L.vis_engine_HP_output) 9 =
+											{if}
+' 320 PS
+											1.6 (S.L.visvar_engine_HP_output)
+											{else}
+												(L.L.vis_engine_HP_output) 10 =
+												{if}
+' 350 PS
+												1.75 (S.L.visvar_engine_HP_output)
+												{else}
+													(L.L.vis_engine_HP_output) 11 =
+													{if}
+' 360 PS
+													1.8 (S.L.visvar_engine_HP_output)
+													{endif}
+												{endif}
+											{endif}
+										{endif}
+									{endif}
+								{endif}											
+							{endif}
+						{endif}
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+	{else}
+		(L.L.breakdown_46_true) 2 =
+		{if}
+			0.7901 (S.L.visvar_engine_HP_output)
+		{endif}
+
+		(L.L.Fail_EDC_AccelContr_true) 2 =
+		{if}
+			0.8901 (S.L.visvar_engine_HP_output)
+		{endif}
+
+		(L.L.Fail_EDC_AccelContr_true) 1 =
+		{if}
+			0.3901 (S.L.visvar_engine_HP_output)
+		{endif}
+	{endif}
+
+	(L.L.elec_busbar_main_sw)
+	{if}
+		(L.L.startup) (L.S.Timegap) + 10 min (S.L.startup)
+	{else}
+		0 (S.L.startup)
+	{endif}
+
+'Wenn Tank leer oder Motor kaputt, dann dies feststellen und im n�chsten Schritt ber�cksichtigen:
+
+	(L.L.engine_tank_content) 0 <= 
+	(L.L.engine_failure_general) || s0
+
+'Grenzdrehzahl festlegen:
+
+	(L.L.engine_RPM_ign) (L.L.Throttle) 5 * - s1
+
+'Umdrehungen berechnen, seit Motor schnell genug dreht:
+
+	(L.L.engine_n) l1 >
+	{if}
+		(L.L.engine_revs_since_start) (L.L.engine_n) 60 / (L.S.Timegap) * +
+	{else}
+		0
+	{endif}
+	(S.L.engine_revs_since_start)
+
+	(L.L.engine_shutoff_finished) !
+	(L.L.engine_n) 400 < &&
+	{if}
+		(T.L.ev_engineshutdown)
+		(C.L.engine_RPM_ign_cold) (S.L.engine_RPM_ign)
+		1 (S.L.engine_shutoff_finished)
+	{endif}
+	(L.L.engine_n) 400 >
+	{if}
+		0 (S.L.engine_shutoff_finished)
+	{endif}
+
+	(L.L.engine_on)
+	(L.L.engine_n) l1 <
+	(L.L.engine_injection_on) ! ||
+	l0 || &&
+	{if}
+		0 (S.L.engine_on)
+	{endif}
+
+
+	(L.L.engine_on) !
+	(L.L.engine_n) l1 > &&
+	(L.L.engine_revs_since_start) 0.75 > &&
+	(L.L.engine_injection_on) &&
+	l0 ! &&
+	{if}
+		(L.L.engine_n) (C.L.engine_startering_sound_n_max) <
+		{if}
+			(T.L.ev_engine_ingnition)
+		{else}
+			0 (S.L.engine_n_timein)
+		{endif}
+		1 (S.L.engine_on) 
+	{endif}
+
+	(L.L.engine_on)
+	{if}
+		(L.L.engine_n_timein) (L.S.Timegap) + 15 min (S.L.engine_n_timein)
+	{else}
+		(L.L.engine_shutoff_finished)
+		(L.L.engine_on) ! &&
+		{if}
+			0 (S.L.engine_n_timein)
+		{endif}
+	{endif}
+
+'Berechnen der Motorbremsaktivierung:
+'Aktuelle Einstellung: Hamburg (ohne Getriebesteuerung)
+
+	(L.L.brake) 0.01 >
+	(L.L.antrieb_retarder_sw) &&
+'	(L.L.antrieb_lockup_fest) &&
+'	(L.L.antrieb_getr_fest) &&
+'	(L.L.antrieb_getr_gangwahl) 1 > &&
+
+	(L.L.antrieb_retarder_sw_direkt) ||
+	(L.L.elec_busbar_main) (C.L.elec_busbar_minV) > && s0
+
+	l0 (L.L.engine_brake_target) = !
+	{if}
+		0.1 (S.L.engine_brake_timer)
+		l0 (S.L.engine_brake_target)
+		{if}
+			(T.L.ev_engine_brake_actuator_on)
+		{else}
+			(T.L.ev_engine_brake_actuator_off)
+		{endif}
+	{endif}
+
+'Motorbremsaktuator:
+'
+'	(L.L.engine_brake_timer) 0 <=
+'	{if}
+'		(L.L.engine_brake_target) s0 (L.L.engine_brake_active) = !
+'		{if}
+'			l0 (S.L.engine_brake_active)
+'		{endif}
+'	{else}
+'		(L.L.engine_brake_timer) (L.S.Timegap) - (S.L.engine_brake_timer)
+'	{endif}
+'
+'Wenn Motorbremse an, dann Gaspedal zwangsweise auf 0:
+'
+'	(L.L.engine_brake_target)
+'	{if}
+'		0 (S.L.throttle)
+'	{endif}
+
+	(L.L.visvar_equipment_is_CNG)
+	(L.L.visvar_equipment_is_FCEV) ||
+	{if}
+		(L.L.engine_tank_content) (F.L.CNG_tank_content_pressure_relation)
+		(L.L.engine_n) (F.L.CNG_engine_n_pressure_relation) *
+		(S.L.engine_tank_content_press)
+
+	{endif}
+	
+'Alte Motordrehzahl speichern:
+
+	(L.L.engine_n) 100 < (L.L.engine_injection_on) ! &&
+	{if}
+		0 (S.L.engine_n) 
+	{endif}
+
+	(L.L.engine_on)
+	{if}	
+		(L.L.bremse_kompressor) 40 *
+		(L.L.HVAC_AC_cooling) 40 * +
+		(L.L.HVAC_FhrAC_cooling) 12 * +
+		(L.L.engine_servo_pump_activity) 50 * 120 min +
+		(L.L.lights_beleuchtung) 4 * +
+		(L.L.lights_beleuchtung_1R) +
+		(L.L.lights_beleuchtung_1L) +
+		(L.L.lights_stand) 4 * +
+		(L.L.lights_abbl) 4 * +
+		(L.L.lights_fern) 4 * +
+		500 min
+		(S.L.engine_M_additional_load)
+		10 / (S.L.engine_rpm_target2)
+	{else}
+		0 (S.L.engine_M_additional_load) (S.L.engine_rpm_target2)
+	{endif}
+
+	(M.L.engine_temperature)
+
+	(M.L.engine_consumption)
+
+'	E-Gas mit elektr. Abriegelung
+
+	(L.L.limiter_state)
+	(L.L.tempomat_state) ! &&
+	{if}
+		(L.L.Velocity_sensor) (F.L.max_speed_limiter) (L.L.throttle) * (L.L.engine_EBS_throttle_restr) * (L.L.engine_knickschutz_eingriff) * (S.L.engine_internal_throttle)
+	{else}
+		(L.L.tempomat_state)
+		{if}
+			(L.L.Velocity_sensor) (L.L.velocity_tempomat) - (S.L.velocity_difference)
+			(L.L.velocity_difference) (F.L.throttle_tempomat) (L.L.engine_EBS_throttle_restr) * (L.L.engine_knickschutz_eingriff) * (S.L.engine_internal_throttle)
+		{else}
+			(L.L.Velocity_sensor) (F.L.max_speed) (L.L.throttle) * (L.L.engine_EBS_throttle_restr) * (L.L.engine_knickschutz_eingriff) * (S.L.engine_internal_throttle)
+		{endif}
+	{endif}
+
+'	Override durch Haltestellenbremse ODER Motorabstellung
+
+	(L.L.bremse_halte_sw)
+	(L.L.bremse_halte) ||
+	(L.L.door_20h_sw) ||
+	(C.L.engine_e-gas) &&
+	(L.L.engine_injection_on) ! ||
+	(L.L.cg_active) ||
+	{if}
+		0 (S.L.engine_internal_throttle)
+	{endif}
+
+
+'MCQ: calculating tank content percent and write into pre defined variable for publishing on red line:
+	(L.L.engine_tank_content) 250 / (S.L.tank_percent)
+
+'Anlass-Grenzdrehzahl simulieren:
+
+
+	(L.L.Fail_EDC_AccelContr_true) 1 = !
+	(L.L.Fail_EDC_AccelContr_true) 2 = ! &&
+	{if}
+		(L.L.visvar_equipment_is_CNG)
+		{if}
+			(L.L.engine_RPM_ign)
+			(L.L.engine_n) (L.S.Timegap) * (C.L.engine_RPM_ign_time2warm) / - 
+			(L.S.Timegap) 1 / +
+			(C.L.engineCNG_RPM_ign_warm) max (C.L.engineCNG_RPM_ign_cold) min (S.L.engine_RPM_ign)
+		{else}
+			(L.L.engine_RPM_ign)
+			(L.L.engine_n) (L.S.Timegap) * (C.L.engine_RPM_ign_time2warm) / - 
+			(L.S.Timegap) 1 / +
+			(C.L.engine_RPM_ign_warm) max (C.L.engine_RPM_ign_cold) min (S.L.engine_RPM_ign)
+		{endif}
+	{else}
+		(L.L.engine_RPM_ign)
+		(L.L.engine_n) (L.S.Timegap) * (C.L.engine_RPM_ign_time2warm) / - 
+		(L.S.Timegap) 1 / +
+		(C.L.engineMALF_RPM_ign_warm) max (C.L.engineMALF_RPM_ign_cold) min (S.L.engine_RPM_ign)
+	{endif}
+
+	(L.L.engine_n) 50 <
+	{if}
+		(L.L.Fail_EDC_AccelContr_true) 1 = !
+		(L.L.Fail_EDC_AccelContr_true) 2 = ! &&
+		{if}
+			(L.L.visvar_equipment_is_CNG)
+			{if}
+				(C.L.engineCNG_RPM_ign_cold) (S.L.engine_RPM_ign)
+			{else}
+				(C.L.engine_RPM_ign_cold) (S.L.engine_RPM_ign)
+			{endif}
+		{else}
+			(C.L.engineMALF_RPM_ign_cold) (S.L.engine_RPM_ign)
+		{endif}
+	{endif}
+'Servopumpe:
+
+	(L.L.engine_servo_pump_lastlenk) (L.L.Axle_Steering_0_L) s0 - abs (L.S.Timegap) / s1
+'d�mpfen:
+	(L.L.engine_servo_pump_activity) 1 (L.S.Timegap) 2 * - * l1 max (S.L.engine_servo_pump_activity)
+
+
+'lastlenk aktualisieren:
+	l0 (S.L.engine_servo_pump_lastlenk)
+	
+'Durch Zeit wird sie geringer, durch Drehzahl h�her:
+
+'	Turbolader:
+
+	(L.L.Fail_EDC_AccelContr_true) 1 = !
+	{if}
+		(L.L.engine_n) (F.L.engine_turbo_RPM_factor) (L.L.engine_throttle_injection) (F.L.engine_turbo_throttle_factor) * 100 * (S.L.engine_turbo_RPM_soll) s0
+		(L.L.engine_turbo_RPM) s1
+		2.5 s2
+		1 s3
+		(M.L.engine_traegheit)
+		l1 (S.L.engine_turbo_RPM)
+	{else}
+		0 (S.L.engine_turbo_RPM)
+	{endif}
+
+'	Blowoff turbina	
+
+	(L.L.Fail_EDC_AccelContr_true) 1 = !
+	{if}
+		(L.L.engine_n) 1150 >
+		(L.L.throttle) 0.4 > &&
+		{if}
+			1 (S.L.turbo_wastegate)
+		{endif}
+
+		(L.L.throttle) 0.2 <
+		(L.L.schaltverzoegerung) 0.5 < ||
+		(L.L.turbo_wastegate) &&
+		{if}
+			(T.L.ev_turbo_wastegate)
+			0 (S.L.turbo_wastegate)
+		{endif}
+	{endif}
+
+{end}
+
+
+{macro:turbo_wastegate_random_sound}
+
+(L.L.turbo_wastegate) 0 =
+{if}
+	28 random (S.L.turbo_wastegate_random)
+{endif}
+
+(L.L.turbo_wastegate_random) 0 =
+{if}
+	(T.L.ev_turbo_wastegate0)
+{endif}
+
+(L.L.turbo_wastegate_random) 1 =
+{if}
+	(T.L.ev_turbo_wastegate1)
+{endif}
+
+(L.L.turbo_wastegate_random) 2 =
+{if}
+	(T.L.ev_turbo_wastegate2)
+{endif}
+
+(L.L.turbo_wastegate_random) 3 =
+{if}
+	(T.L.ev_turbo_wastegate3)
+{endif}
+
+(L.L.turbo_wastegate_random) 4 =
+{if}
+	(T.L.ev_turbo_wastegate4)
+{endif}
+
+(L.L.turbo_wastegate_random) 5 =
+{if}
+	(T.L.ev_turbo_wastegate5)
+{endif}
+
+(L.L.turbo_wastegate_random) 6 =
+{if}
+	(T.L.ev_turbo_wastegate6)
+{endif}
+
+{end}
+
+
+{macro:engine_moment}
+
+' doing funny apypybyr with engine
+
+	(L.L.vis_voith_or_zf) 0 =
+	(L.L.engine_n) 500 > &&
+	(L.L.antrieb_getr_gangwahl) 5 = &&
+	(L.L.antrieb_getr_aktugang) 0 = &&
+	(L.L.antrieb_did_apupybyr) 0 = &&
+	{if}
+		(L.L.antrieb_apupybyr_timer) (L.S.Timegap) + 1 min (S.L.antrieb_apupybyr_timer)
+
+		(L.L.antrieb_apupybyr_timer) 1 >=
+		{if}
+			1 (S.L.antrieb_apupybyr_requested)
+		{endif}
+
+		(L.L.engine_n) 640 >=
+		{if}
+			1 (S.L.antrieb_did_apupybyr)
+			0 (S.L.antrieb_apupybyr_requested)
+		{endif}		
+	{else}
+		(L.L.antrieb_getr_aktugang) 1 >=
+		(L.L.engine_n) 500 < ||
+		{if}
+			0 (S.L.antrieb_apupybyr_requested) (S.L.antrieb_did_apupybyr) (S.L.antrieb_apupybyr_timer)
+		{endif}
+	{endif}
+
+'	Reaktionszeit der Einspritzpumpe
+
+	(L.L.coolant_temperature_sensor) 10 <
+	(L.L.Fail_EDC_AccelContr_true) 2 = ||
+	(L.L.antrieb_apupybyr_requested) 1 = ||
+	{if}
+		(L.L.engine_temperature) (F.L.engine_rpm_cold) (L.L.engine_cng_rpm_flux) + (L.L.engine_rpm_target2) + (S.L.RPM_Temp)
+	{else}
+		(L.L.Engine_DPF_Regen_Active) 1 = 
+		{if}
+			(L.L.Engine_DPF_mobile_regen_stdby)
+			{if}
+				200 (L.L.engine_rpm_target2) + (S.L.RPM_Temp)
+			{else}
+				1000 (L.L.engine_rpm_target2) + (S.L.RPM_Temp)
+			{endif}
+		{else}
+			(L.L.engine_rpm_target) (L.L.engine_rpm_target2) + (S.L.RPM_Temp)
+		{endif}
+	{endif}
+
+'	CNG RPM fluctuations
+
+	(L.L.visvar_equipment_is_CNG)
+	{if}
+		(L.L.engine_n_timein) 0.1 >
+		(L.L.engine_n_timein) 2.4 < &&
+		{if}
+			(C.L.engine_governed_idle_RPM) 480 + (S.L.engine_rpm_target)
+		{endif}	
+
+		(L.L.engine_n_timein) 2.4 >
+		(L.L.engine_n_timein) 3 < &&
+		{if}
+			(C.L.engine_governed_idle_RPM) 150 + (S.L.engine_rpm_target)
+		{endif}	
+
+		(L.L.engine_n_timein) 3 >
+		{if}
+
+			(L.L.engine_cng_rpm_timer) (L.S.Timegap) + 10 min (S.L.engine_cng_rpm_timer)
+								
+			(L.L.engine_cng_rpm_timer) (L.L.engine_cng_rpm_timer_next) >=
+			{if}
+'				(L.L.engine_cng_rpm_fix)
+'				{if}
+'					60 random /-/ 60 random 30 + (S.L.engine_cng_rpm_flux)
+'				{else}	
+'					60 random 30 + (S.L.engine_cng_rpm_flux)
+'				{endif}	
+
+				100 280 random + (S.L.engine_cng_rpm_flux)
+
+				45 random 10 / 1 + (S.L.engine_cng_rpm_timer_next)
+'				(L.L.engine_cng_rpm_fix) ! (S.L.engine_cng_rpm_fix)
+				0 (S.L.engine_cng_rpm_timer)
+			{endif}	
+
+			(C.L.engine_governed_idle_RPM) (L.L.engine_cng_rpm_flux) + (S.L.engine_rpm_target)
+
+		{endif}
+		(M.L.engine_speedcontrol)
+	{else}
+		0 (S.L.engine_cng_rpm_flux)
+		(C.L.engine_governed_idle_RPM) 100 + (S.L.engine_rpm_target)
+	{endif}
+
+	(L.L.engine_internal_throttle) 0 =
+	(L.L.engine_n) 450 > &&
+	{if}
+		(L.L.visvar_equipment_is_CNG) !
+		{if}
+			(L.L.engine_n) (L.L.RPM_Temp) <
+			{if}
+				(L.L.engine_throttle_injection) (L.S.Timegap) 1 * + 0.3 min (S.L.engine_throttle_injection)
+			{else}
+				(L.L.engine_throttle_injection) (L.S.Timegap) 1 * - 0 max (S.L.engine_throttle_injection)
+			{endif}
+		{endif}
+	{else}
+		(L.L.engine_internal_throttle) (L.L.engine_throttle_injection) >
+		{if}
+			(L.L.schaltverzoegerung) 2 >
+			(L.L.schaltverzoegerung_runter) 1 > &&
+			{if}
+				(L.L.engine_throttle_injection) (L.S.Timegap) 2 * + (L.L.engine_internal_throttle) min (S.L.engine_throttle_injection)
+			{else}
+				(L.L.schaltverzoegerung_runter) 1 <
+				{if}
+					(L.L.engine_throttle_injection) (L.S.Timegap) 2 * + (L.L.throttle) 0.85 * min (S.L.engine_throttle_injection)
+				{else}
+					(L.L.engine_throttle_injection) (L.S.Timegap) 2 * + (L.L.antrieb_M_restriction) min (S.L.engine_throttle_injection)
+				{endif}
+			{endif}
+		{else}
+			(L.L.engine_throttle_injection) (L.S.Timegap) 2 * - (L.L.engine_internal_throttle) max (S.L.engine_throttle_injection)
+		{endif}
+	{endif}
+
+	(L.L.engine_injection_on) (L.L.engine_on) &&
+	{if}
+		(L.L.visvar_equipment_is_CNG)
+		{if}
+			(L.L.engine_throttle_injection) s1 (L.L.engine_n) s0 (F.L.engine_M_maxThrottle) * 1 l1 - l0 (F.L.engine_M_minThrottle_cng) * + (L.L.engine_M_restriction) * (L.L.visvar_engine_HP_output) * (L.L.Engine_DPF_state) 5 / - (S.L.engine_M) s0
+		{else}
+			(L.L.engine_throttle_injection) s1 (L.L.engine_n) s0 (F.L.engine_M_maxThrottle) * 1 l1 - l0 (F.L.engine_M_minThrottle) * + (L.L.engine_M_restriction) * (L.L.visvar_engine_HP_output) * (L.L.Engine_DPF_state) 5 / - (S.L.engine_M) s0
+		{endif}
+	{else}
+		(L.L.engine_n) 1 >
+		{if}
+			(L.L.engine_n) (F.L.engine_n_coldM) s0
+		{else}
+			0 s0
+		{endif}
+	{endif}
+
+'�lviskosit�t:
+
+	(L.L.engine_n) 1 >
+	{if}
+'		(L.L.engine_temperature) (C.L.engine_oelvis_M_expfactor) * exp (C.L.engine_oelvis_M_nulldeg) *
+	{else}
+		0
+	{endif}
+	l0 + (S.L.engine_M)
+
+	(L.L.engine_starter)
+	{if}
+'Moment exponentiell abfallend:
+		(L.L.engine_n) (C.L.engine_starter_n_halbwert) / -0.69314 * exp (C.L.engine_starterM) * (L.L.elec_busbar_main) * s2 (L.L.engine_M) + (S.L.engine_M)
+'flie�ender Strom:
+		(L.L.elec_busbar_Rinv_summe) l2 (C.L.engine_starter_Ifaktor) * (C.L.engine_starter_minI) + 24 / + (S.L.elec_busbar_Rinv_summe)
+		
+
+'		(C.L.engine_starter_n_max) (L.L.engine_n) - (C.L.engine_starter_n_max) / 0 max (L.L.elec_busbar_main) * (C.L.engine_starterM) * s2 (L.L.engine_M) + (S.L.engine_M)
+'flie�ender Strom: (0.10472 = 2*PI/60)
+'		(L.L.elec_busbar_Rinv_summe) l2 (L.L.engine_n) 0.10472 * * (L.L.elec_busbar_main) (C.L.elec_Vnenn) * sqr / + (S.L.elec_busbar_Rinv_summe)
+'Einfache Variante:
+'		(L.L.elec_busbar_Rinv_summe) 1 0.15 (L.L.engine_n) 3000 / + / + (S.L.elec_busbar_Rinv_summe)
+
+
+
+		l2 (L.L.engine_n) 0.10472 * * 
+	{endif}
+
+{end}
+
+
+
+{macro:engine_acceleration}
+'	Berechnung der Drehzahlbeschleunigung:
+
+	(L.L.visvar_equipment_is_CNG)
+	(L.L.engine_on) &&
+	{if}
+		(L.L.engine_M) (L.L.antrieb_getr_M_an) (L.L.engine_M_additional_load) + - (L.L.engine_n) (F.L.engine_J_variable) /
+	{else}
+		(L.L.engine_M) (L.L.antrieb_getr_M_an) (L.L.engine_M_additional_load) + - (C.L.engine_J) /
+	{endif}
+
+'	... Berechnung der Motordrehzahl anhand der Drehzahlbeschleunigung:
+
+	(L.S.Timegap) * 30 * pi / (L.L.engine_n) + (C.L.engine_governed_max_RPM) min (S.L.engine_n)
+{end}
+
+
+{macro:engine_consumption}
+'					      	=2*PI/60
+	(L.L.engine_M) 0 max (L.L.engine_n) * 0.10472 * s0
+	(L.L.engine_on)
+	{if}
+		l0 (C.L.engine_power_idle) + (S.L.engine_power)
+	{else}
+		l0 (S.L.engine_power)
+	{endif}
+	
+'Beim Abw�rgen war der Tank leer - kann ja auch nicht sein! ;-)
+	(L.L.engine_n) 100 >
+	{if}
+
+' first calculate current injectors dosage per 1 zylinder
+'	check if bus is on idle or not
+
+		(L.L.engine_n) (C.L.engine_governed_idle_RPM) 50 + >
+		{if}
+			(L.L.engine_throttle_injection) (F.L.engine_injectors_crossref_throttle) 
+		{else}	
+			20
+		{endif}
+
+' EDC now checks if engine is cold, if so, ups the dosage by approx 10-15%, and lowers the value if engine is overheat, after 125 C cutting the fuel flow
+
+		(L.L.coolant_temperature_sensor) (F.L.engine_injectors_crossref_eng_temp) * 
+
+' Now calculate MAP sensor factor
+
+'	Throttle position
+
+		(L.L.engine_n) (F.L.engine_injectors_crossref_MAP_RPM) *
+
+'	Turboloader factor
+
+		(L.L.engine_turbo_RPM) (F.L.engine_injectors_crossref_MAP_turbo) *
+
+'	Engine temperature
+
+		(L.L.coolant_temperature_sensor) (F.L.engine_injectors_crossref_MAP_eng_temp) *
+
+'	Speed factor correction
+
+		(L.L.Velocity_sensor) (F.L.engine_injectors_crossref_MAP_velocity) *
+
+'	IAT correction
+
+		(L.S.Weather_Temperature) (F.L.engine_injectors_crossref_MAP_air_temp) *
+
+' now add load factor from additional things (AC, Alternators load etc)
+
+		(L.L.lights_stand) 1.001 * 1 max 1.001 min *
+		(L.L.lights_abbl) 1.001 * 1 max 1.001 min *
+		(L.L.lights_beleuchtung) 1.001 * 1 max *
+		(L.L.HVAC_AC_cooling) 1.05 * 1 max 1.05 min *
+		(L.L.HVAC_AC_heizung) 1.05 * 1 max 1.05 min *
+
+' multiply by number of zylinders
+
+		6 *
+
+' now crossrefrence that with current engine speed and divide by 3 (injection, explosion, exhaust)
+
+		(L.L.engine_n) * 3 / s0
+
+' and finally, convert miligrams to liters
+
+		0.0000012 * 0 max (S.L.engine_fuel_current_use_l)
+
+' debug
+
+		l0 (S.L.engine_fuel_debug)
+
+' now convert that variable to be used for current fuel usage per 100km/h
+
+		(L.L.engine_fuel_current_use_l) 60 * 100 (L.L.Velocity) 0.1 max / * 199.9 min (S.L.engine_fuel_l_per_100km)
+
+' now make less fuel in tanks
+
+		(L.L.engine_tank_content) (L.L.engine_fuel_current_use_l) 3600 / 0.00001 max - 0 max (S.L.engine_tank_content)
+
+'		(L.L.engine_energytransfer) (L.L.engine_power) (L.S.Timegap) * 1000 / 3600 / + (S.L.engine_energytransfer)
+'		(L.L.engine_energy_used) (L.L.engine_power) (L.S.Timegap) * 1000 / 3600 / (L.L.engine_n) (F.L.engine_efficiency_rpm) (L.L.engine_throttle_injection) (F.L.engine_efficiency_throttle) / / (L.L.Engine_DPF_Regen_Active) 2000 / + (L.L.HVAC_AC_cooling) 4000 / + (L.L.HVAC_AC_heizung) 4000 / + (L.L.HVAC_podestheizung) 4000 / + s0 + (S.L.engine_energy_used)
+'		(L.L.engine_fuel_used) l0 (C.L.engine_fuel_value) / s1 + (S.L.engine_fuel_used)
+'	
+'		l1 (L.S.Timegap) / 3600 * (L.L.engine_throttle_injection) * (S.L.engine_consumption_h)
+'		(L.L.engine_tank_content) l1 - 0 max (S.L.engine_tank_content)
+	{else}
+		0 (S.L.engine_consumption_h) (S.L.engine_fuel_l_per_100km) (S.L.engine_fuel_current_use_l)
+	{endif}
+
+{end}
+
+{macro:engine_speedcontrol}
+
+	(L.L.engine_n_timein) 3 <
+	{if}
+		(L.L.engine_n) (L.L.engine_rpm_target) <
+		{if}
+			(L.L.engine_additional_throttle) (L.S.Timegap) 1.0 * + 0.4 min (S.L.engine_additional_throttle)
+		{else}
+			(L.L.engine_additional_throttle) (L.S.Timegap) 1.0 * - 0.07 max (S.L.engine_additional_throttle)
+		{endif}
+	{else}
+		(L.L.engine_n) (L.L.engine_rpm_target) <
+		{if}
+			(L.L.engine_additional_throttle) (L.S.Timegap) 1.0 * + 0.164 min (S.L.engine_additional_throttle)
+		{else}
+			(L.L.engine_additional_throttle) (L.S.Timegap) 1.0 * - 0.04 max (S.L.engine_additional_throttle)
+		{endif}
+	{endif}
+
+	(L.L.engine_internal_throttle) (L.L.engine_additional_throttle) + 1 min 0 max (L.L.engine_EBS_throttle_restr) * (L.L.engine_knickschutz_eingriff) * (S.L.engine_internal_throttle)
+
+{end}
+
+{macro:engine_temperature}
+
+
+	(L.L.engine_power) (C.L.engine_Qrate_engine_factor) * (S.L.engine_Qrate_engine)
+
+'	L�ftersteuerung Hydrostat
+'	I - 1000 rpm
+'	II - 1333 rpm
+'	III - 1467 rpm
+'	IV - 1667 RPM
+'	V - 1933 RPM
+
+	(L.L.engine_n) 300 >
+	(L.L.coolant_temperature_sensor) 88 > &&
+	(L.L.wiatrak_delay_timer) 0 > ||
+	{if}
+
+		(L.L.schaltverzoegerung_runter) 0.45 <
+		{if}
+			1000 (S.L.wiatrak_rpm_target)
+
+			(L.L.wiatrak_gear_sound_played) !
+			{if}
+				16 random (S.L.wiatrak_gear_sound)
+				(T.L.wiatrak_gear_downshift)
+				1 (S.L.wiatrak_gear_sound_played)
+			{endif}
+		{else}
+			0 (S.L.wiatrak_gear_sound_played)
+
+			(L.L.brake)
+			(L.L.antrieb_retarder) ||
+			(L.L.Velocity_sensor) 2 > &&
+			{if}
+
+				(L.L.Velocity_sensor) 8 <
+				{if}
+					(L.L.coolant_temperature_sensor) 102 >
+					{if}
+						1933 (S.L.wiatrak_rpm_target)
+					{else}
+						(L.L.coolant_temperature_sensor) (F.L.engine_cooler_rpm_xref_temp) 1467 max
+						(S.L.wiatrak_rpm_target)
+					{endif}
+				{else}
+					(L.L.coolant_temperature_sensor) (F.L.engine_cooler_rpm_xref_temp) 1667 max
+					(S.L.wiatrak_rpm_target)
+				{endif}
+
+			{else}
+
+				(L.L.Velocity_sensor) 2 <
+				{if}
+					(L.L.coolant_temperature_sensor) 102 >
+					{if}
+						(L.L.coolant_temperature_sensor) (F.L.engine_cooler_rpm_xref_temp)
+						1000 + 2 /
+						(S.L.wiatrak_rpm_target)
+					{else}
+						1000 (S.L.wiatrak_rpm_target)
+					{endif}
+				{else}
+					(L.L.coolant_temperature_sensor) (F.L.engine_cooler_rpm_xref_temp) 2 /
+					(L.L.Velocity_sensor) (F.L.engine_cooler_rpm_xref_speed) 2 / +
+					(L.L.engine_n) (F.L.engine_cooler_rpm_xref_throttle) 2 * +
+					(L.L.engine_throttle_injection) (F.L.engine_cooler_rpm_xref_throttle2) 3 * + 6 /
+
+					(S.L.wiatrak_rpm_target)
+				{endif}
+			{endif}
+		{endif}
+	{endif}
+
+	(L.L.engine_on) !
+	{if}
+		0 (S.L.wiatrak_delay_timer) (S.L.wiatrak_rpm_target) 
+	{endif}
+
+	(L.L.wiatrak_rpm_target) 0 >
+	(L.L.coolant_temperature_sensor) 88 < &&
+	{if}
+		(L.L.wiatrak_delay_timer) (L.S.Timegap) + (S.L.wiatrak_delay_timer) 60 >=
+		{if}
+			0 (S.L.wiatrak_rpm_target) 
+		{endif}
+	{endif}
+
+	(L.L.coolant_temperature_sensor) 88 >
+	{if}
+		0 (S.L.wiatrak_delay_timer)
+	{endif}
+
+
+	(L.L.wiatrak_rpm_target) s0
+	(L.L.wiatrak_rpm) s1
+	1.5 s2
+	1.7 s3
+	(M.L.engine_traegheit)
+	l1 (S.L.wiatrak_rpm)
+
+
+	(L.L.engine_temperature) (C.L.kuehlerthermostat_opn) >
+	(L.L.elec_busbar_main) (C.L.elec_busbar_minV) > (L.L.engine_on) && &&
+	{if}
+		1 (S.L.engine_thermostat_open)
+	{endif}
+
+	(L.L.engine_temperature) (C.L.kuehlerthermostat_cls) <
+	(L.L.engine_on) ! ||
+	{if}
+		0 (S.L.engine_thermostat_open)
+	{endif}
+
+	(L.L.engine_temperature) (C.L.luefterthermostat_opn) >
+	(L.L.elec_busbar_main) (C.L.elec_busbar_minV) > (L.L.engine_on) && &&
+	{if}
+		1 (S.L.engine_luefter) (S.L.engine_luefter_clamped)
+	{endif}
+
+	(L.L.engine_temperature) (C.L.luefterthermostat_cls) <
+	(L.L.engine_on) ! ||
+	{if}
+		0 (S.L.engine_luefter) (S.L.engine_luefter_clamped)
+	{endif}
+
+
+	(L.L.engine_thermostat_open)
+	(L.L.brake) 0.05 > &&
+	(L.L.velocity) 15 > &&
+	{if}
+		(L.L.engine_n) 1.4 * 1300 min (S.L.radiator_RPM_sollwert)
+		1 (S.L.engine_luefter)
+	{else}
+		(L.L.coolant_temperature_sensor) 95 > !
+		{if}
+			500 (S.L.radiator_RPM_sollwert)
+		{endif}
+		(L.L.engine_luefter_clamped) !
+		{if}
+			0 (S.L.engine_luefter)
+		{endif}
+	{endif}
+
+	(L.L.engine_luefter)
+	(L.L.coolant_temperature_sensor) 95 >= &&
+	{if}
+		(L.L.brake) 0.05 >
+		(L.L.velocity) 15 > &&
+		{if}
+			(L.L.engine_n) 1.4 * 1300 min (S.L.radiator_RPM_sollwert)
+			0 (S.L.lowering_rpm)
+		{else}
+			(L.L.velocity) 14 < &&
+			(L.L.engine_n) 100 > &&
+			{if}
+				(L.L.lowering_rpm) !
+				{if}
+					1000 (S.L.radiator_RPM_sollwert)
+					1 (S.L.lowering_rpm) (S.L.fan_static)
+				{else}
+					(L.L.radiator_RPM_sollwert) (L.S.Timegap) 5 * - 500 max (S.L.radiator_RPM_sollwert)
+				{endif}
+			{else}
+				(L.L.engine_n) 1300 min (S.L.radiator_RPM_sollwert)
+			{endif}
+		{endif}
+	{endif}
+
+'debug
+
+
+
+	(L.L.breakdown_53_true) 1 = !
+	(L.L.breakdown_55_true) 1 = ! &&
+	{if}
+		(L.L.radiator_RPM) (L.L.radiator_RPM_sollwert) >
+		{if}
+			(L.L.radiator_RPM) (L.S.Timegap) 500 * - (L.L.radiator_RPM_sollwert) max (S.L.radiator_RPM)
+		{else}
+			(L.L.radiator_RPM) (L.S.Timegap) 500 * + (L.L.radiator_RPM_sollwert) min (S.L.radiator_RPM)
+		{endif}
+	{else}
+		0 (S.L.radiator_RPM)
+	{endif}
+
+'	--------------------------------------------------
+'	Berechnung der Raten:
+	(L.L.breakdown_53_true) 1 = !
+	(L.L.breakdown_55_true) 1 = ! &&
+	{if}
+		(L.L.engine_temperature) (L.L.engine_temperature_envir) - (C.L.engine_Qrate_cooling_factor) * (S.L.engine_Qrate_cooling)
+		(L.L.engine_temperature) (L.S.Weather_Temperature) - (C.L.engine_Qrate_fan_factor) * (L.L.engine_n) * (S.L.engine_Qrate_fan)
+	{else}
+		(L.L.breakdown_53_true) 1 =
+		{if}
+			(L.L.engine_temperature) (L.L.engine_temperature_envir) - (C.L.engine_Qrate_cooling_factor) 0.65 * * (S.L.engine_Qrate_cooling)
+			(L.L.engine_temperature) (L.S.Weather_Temperature) - (C.L.engine_Qrate_fan_factor) 0.65 * * (L.L.engine_n) * (S.L.engine_Qrate_fan)
+		{else}
+			(L.L.breakdown_55_true) 1 =
+			{if}
+				(L.L.engine_temperature) (L.L.engine_temperature_envir) - (C.L.engine_Qrate_cooling_factor) 0.85 * * (S.L.engine_Qrate_cooling)
+				(L.L.engine_temperature) (L.S.Weather_Temperature) - (C.L.engine_Qrate_fan_factor) 0.85 * * (L.L.engine_n) * (S.L.engine_Qrate_fan)
+			{endif}
+		{endif}
+	{endif}
+
+	(L.L.engine_temperature_envir) (L.S.Weather_Temperature) - (C.L.engine_Qrate_Veloc_factor_basic) (C.L.engine_Qrate_veloc_factor) (L.L.velocity) abs * + * (S.L.engine_Qrate_veloc)
+
+	(L.L.engine_thermostat_open)
+	{if}
+		(L.L.engine_luefter) !
+		{if}	
+'			Reduktion der K�hlwirkung durch nur leer mitdrehenden L�fter
+			(L.L.engine_Qrate_fan) 0.4 * (S.L.engine_Qrate_fan)	
+		{endif}
+	{else}			
+'		Nullwirkung des L�fters durch K�hlwasserkurzschluss	
+		0 (S.L.engine_Qrate_fan)
+	{endif}
+
+
+'	--------------------------------------------------
+'	Berechnung der Temperaturver�nderungen:
+
+	(L.L.engine_Qrate_engine) (L.L.engine_Qrate_cooling) - (L.L.engine_Qrate_fan) - (L.L.cabinair_Qrate_engine_fanheatcooling) - (C.L.engine_cvm_engine) / (L.S.Timegap) * (L.L.engine_temperature) + (S.L.engine_temperature) 
+	(L.L.engine_Qrate_cooling) (L.L.engine_Qrate_veloc) - (C.L.engine_cvm_envir) / (L.S.Timegap) * (L.L.engine_temperature_envir) + (S.L.engine_temperature_envir) 
+
+
+'--------------------------------------------------
+
+
+
+
+{end}
+
+
+{macro:engine_traegheit}
+
+'Simuliert tr�ges Verhalten (exponentiell)
+
+'Ladekonventionen:
+'	Sollwert		l0
+'	Istwert			l1
+'	Konstante Anlauf	l2 (Einheiten/s)
+'	Konstante Ablauf	l3 (Einheiten/s)
+
+'Anlauf oder Auslauf?
+	l0 l1 > 
+	{if}
+		l2 (L.S.Timegap) * 1 min -1 max s4
+	{else}
+		l3 (L.S.Timegap) * 1 min -1 max s4
+	{endif}
+
+
+'Sollwert:
+	l0
+'Istwert:
+	l1
+'Beschleunigung:
+	- l4 *
+'Addition zum Istwert:
+	l1 + s1
+{end}
+
+
+
