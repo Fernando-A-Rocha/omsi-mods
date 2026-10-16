@@ -1,0 +1,2630 @@
+'##########################################
+'EBS/ECAS Script
+'##########################################
+
+'__/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\\_______/\\\\\\\\\\\_______________________/\\\__________________/\\\\\\\\\\\\\\\________/\\\\\\\\\_____/\\\\\\\\\________/\\\\\\\\\\\___        
+' _\/\\\///////////__\/\\\/////////\\\___/\\\/////////\\\__________________/\\\//\\\_______________\/\\\///////////______/\\\////////____/\\\\\\\\\\\\\____/\\\/////////\\\_       
+'  _\/\\\_____________\/\\\_______\/\\\__\//\\\______\///__________________/\\\_/\\\________________\/\\\_______________/\\\/____________/\\\/////////\\\__\//\\\______\///__      
+'   _\/\\\\\\\\\\\_____\/\\\\\\\\\\\\\\____\////\\\________________________\//\\\\//_________________\/\\\\\\\\\\\______/\\\_____________\/\\\_______\/\\\___\////\\\_________     
+'    _\/\\\///////______\/\\\/////////\\\______\////\\\____________________/\\\///\\\_________________\/\\\///////______\/\\\_____________\/\\\\\\\\\\\\\\\______\////\\\______    
+'     _\/\\\_____________\/\\\_______\/\\\_________\////\\\_______________/\\\/__\///\\\/\\\___________\/\\\_____________\//\\\____________\/\\\/////////\\\_________\////\\\___   
+'      _\/\\\_____________\/\\\_______\/\\\__/\\\______\//\\\_____________/\\\______\//\\\//____________\/\\\______________\///\\\__________\/\\\_______\/\\\__/\\\______\//\\\__  
+'       _\/\\\\\\\\\\\\\\\_\/\\\\\\\\\\\\\/__\///\\\\\\\\\\\/_____________\//\\\\\\\\\\\//\\\____________\/\\\\\\\\\\\\\\\____\////\\\\\\\\\_\/\\\_______\/\\\_\///\\\\\\\\\\\/___ 
+'        _\///////////////__\/////////////______\///////////________________\///////////_\///_____________\///////////////________\/////////__\///________\///____\///////////_____
+
+'##########################################
+
+'Controls Brakes and includes air system (compressor)
+'(c) 2025 - Sobol3D
+
+'Script Version: 4.0
+
+'Needs:
+'- Engine (for compressor)
+
+'Revision History:
+'- Sobol3D - ate whopper
+
+'--------------------------------------------------------------
+
+'----------------------
+'	Trigger
+'----------------------
+
+{trigger:parking_brake_toggle}
+
+	(L.L.cp_eswitch_parbr) !
+	{if}
+		(L.L.bremse_feststell) ! (S.L.bremse_feststell) (S.L.bremse_feststell_sw)
+		{if}
+			(T.L.ev_bremse_feststell_ein)
+		{else}
+			(T.L.ev_bremse_feststell_aus)
+		{endif}
+	{else}
+		(L.L.bremse_feststell_sw) ! (S.L.bremse_feststell_sw)
+	{endif}
+
+{end}
+
+
+{trigger:parking_brake_set}
+	
+	(L.L.bremse_feststell) !
+	(L.L.cp_eswitch_parbr) ! &&
+	{if}
+		(S.L.bremse_feststell)
+		(T.L.ev_bremse_feststell_ein)
+
+		1 (S.L.bremse_feststell_sw)
+	{endif}
+
+{end}
+
+{trigger:parking_brake_release}
+
+	(L.L.bremse_feststell)
+	(L.L.cp_eswitch_parbr) ! &&
+	{if}
+		! (S.L.bremse_feststell)
+		(T.L.ev_bremse_feststell_aus)
+
+		0 (S.L.bremse_feststell_sw)
+	{endif}
+
+{end}
+
+{trigger:parking_brake_mouse_drag}
+
+	(L.S.mouse_y) 200 / (L.L.bremse_feststell_sw) + (S.L.bremse_feststell_sw) s0
+	l0 0 <
+	{if}
+		0 (S.L.bremse_feststell_sw)
+	{endif}
+	l0 1 >
+	{if}
+		1 (S.L.bremse_feststell_sw)
+	{endif}
+
+	(L.L.cp_eswitch_parbr) !
+	{if}
+		l0 0.6 > (L.L.bremse_feststell) 0 = &&
+		{if}
+			1 (S.L.bremse_feststell)
+			(T.L.ev_bremse_feststell_ein)
+		{endif}
+		l0 0.4 < (L.L.bremse_feststell) 1 = &&
+		{if}
+			0 (S.L.bremse_feststell)
+			(T.L.ev_bremse_feststell_aus)
+		{endif}
+	{endif}
+
+	1 (S.L.bremse_feststell_klinke)
+{end}
+
+{trigger:parking_brake_mouse_off}
+	0 (S.L.bremse_feststell_klinke)
+{end}
+
+{trigger:wagenkasten_anheben}
+	1 (S.L.anheben_sw)
+	(T.L.ev_VDV_toggle_on)
+
+	(L.L.anheben_sw)
+	(L.L.elec_busbar_main) &&
+	(L.L.ECAS_p_Tank) 550000 > &&
+	(L.L.wagenkasten_anheben) 0.5 < &&
+	(L.L.Fail_ECAS_true) 1 = ! &&
+	{if}
+		(T.L.ECAS_anheben_start)
+	{else}
+		(L.L.wagenkasten_anheben) 0.5 <
+		(L.L.Fail_ECAS_true) 1 = ! &&
+		{if}
+			(T.L.ECAS_anheben_end)
+		{endif}
+	{endif}
+{end}
+
+{trigger:wagenkasten_anheben_off}
+	0 (S.L.anheben_sw)
+	(T.L.ev_VDV_toggle_off)
+
+	(L.L.anheben_sw)
+	(L.L.elec_busbar_main) &&
+	(L.L.ECAS_p_Tank) 550000 > &&
+	(L.L.wagenkasten_anheben) 0.5 = ||
+	(L.L.Fail_ECAS_true) 1 = ! &&
+	{if}
+		(T.L.ECAS_anheben_end)
+	{endif}
+{end}
+
+'----------------------
+'	Init
+'----------------------
+
+{macro:bremse_init}
+
+	1 (S.L.bremse_feststell_sw) (S.L.bremse_feststell)
+
+'Setzen der Luftfederbalgdr�cke
+
+	500000 random 320000 + (S.L.pneum_main_supply_line) 
+	500000 random 320000 + (S.L.pneum_1_supply_line)
+	500000 random 320000 + (S.L.pneum_2_supply_line)
+	500000 random 320000 + (S.L.pneum_3_supply_line)
+	500000 random 320000 + (S.L.pneum_4_supply_line)
+	500000 random 320000 + (S.L.bremse_p_Tank01)
+	500000 random 320000 + (S.L.bremse_p_Tank02)
+	500000 random 320000 + (S.L.bremse_p_Tank03)
+	500000 random 320000 + (S.L.bremse_p_Tank04)
+
+'Leak rates
+
+    40 random 10 + (S.L.pneum_main_supply_line_leak) 
+    40 random 1 + (S.L.pneum_1_supply_line_leak)
+    40 random 1 + (S.L.pneum_2_supply_line_leak)
+    40 random 1 + (S.L.pneum_3_supply_line_leak)
+    40 random 1 + (S.L.pneum_4_supply_line_leak)
+    1600 random 500 + (S.L.bremse_p_Tank01_leak)
+    1600 random 500 + (S.L.bremse_p_Tank02_leak)
+    1600 random 500 + (S.L.bremse_p_Tank03_leak)
+    1600 random 500 + (S.L.bremse_p_Tank04_leak)
+    2700 random 1000 + (S.L.balg_0_R_leak)
+    2700 random 2500 + (S.L.balg_0_L_leak)
+    2700 random 1000 + (S.L.balg_1_R_leak)
+    2700 random 2500 + (S.L.balg_1_L_leak)
+    2700 random 1000 + (S.L.balg_2_R_leak)
+    2700 random 2500 + (S.L.balg_2_L_leak)
+    2700 random 1000 + (S.L.balg_3_R_leak)
+    2700 random 2500 + (S.L.balg_3_L_leak)
+
+'Setzen der Bremszylinderdr�cke	
+	100000 (S.L.bremse_p_luft) (S.L.bremse_p_brzyl_A1_L) (S.L.bremse_p_brzyl_A1_R) (S.L.bremse_p_brzyl_A2_L) (S.L.bremse_p_brzyl_A2_R) (S.L.bremse_p_brzyl_A3_L) (S.L.bremse_p_brzyl_A3_R) (S.L.bremse_p_brzyl_A4_L) (S.L.bremse_p_brzyl_A4_R) 
+	100000 (S.L.Axle_Brakeforce_0_L) (S.L.Axle_Brakeforce_0_R) (S.L.Axle_Brakeforce_1_L) (S.L.Axle_Brakeforce_1_R) (S.L.Axle_Brakeforce_2_L) (S.L.Axle_Brakeforce_2_R) (S.L.Axle_Brakeforce_3_L) (S.L.Axle_Brakeforce_3_R)
+	130000 (S.L.ECAS_zieldruck_0_R) (S.L.ECAS_zieldruck_0_L) (S.L.ECAS_zieldruck_1_R) (S.L.ECAS_zieldruck_1_L) (S.L.ECAS_zieldruck_2_R) (S.L.ECAS_zieldruck_2_L) (S.L.ECAS_zieldruck_3_R) (S.L.ECAS_zieldruck_3_L)
+	100000 (S.L.bremse_p_Balg_0_R) (S.L.bremse_p_Balg_0_L) (S.L.bremse_p_Balg_1_R) (S.L.bremse_p_Balg_1_L) (S.L.bremse_p_Balg_2_R) (S.L.bremse_p_Balg_2_L) (S.L.bremse_p_Balg_3_R) (S.L.bremse_p_Balg_3_L)
+
+{end}
+
+'----------------------
+'	Frame
+'----------------------
+
+{macro:bremse_frame}
+
+'	sensors
+
+    (L.L.bremse_p_tank01) (S.L.bremse_p_tank01_sensor)
+    (L.L.bremse_p_tank02) (S.L.bremse_p_tank02_sensor)
+    (L.L.bremse_p_tank03) (S.L.bremse_p_tank03_sensor)
+    (L.L.bremse_p_tank04) (S.L.bremse_p_tank04_sensor)
+
+'	Turning kompressor on/off
+
+	(L.L.pneum_main_supply_line) 980000 >
+    (L.L.bremse_kompressor) 1 = &&
+	{if}
+		4 random (S.L.ev_kompressor_var)
+		(T.L.ev_kompressor_aus)
+		0 (S.L.bremse_kompressor)
+	{endif}
+
+    (L.L.pneum_main_supply_line) 720000 < 
+	(L.L.engine_n) 300 > &&
+	(L.L.bremse_kompressor) 0 = &&
+	{if}
+		(T.L.ev_kompressor_ein)
+		1 (S.L.bremse_kompressor)
+	{endif}
+
+	(M.L.bremse_kompressor)
+
+'	(M.L.bremse_druckluftsound)
+
+
+    
+'	Main supply line with resevoir -> Cutoff valve before vierkreisschutzventil
+'   1 - open / 0 - closed
+
+	(L.L.pneum_4sv_supply_line) 910000 > 
+	{if}
+		0 (S.L.pneum_4sv_supply_valve)
+    {else}
+        1 (S.L.pneum_4sv_supply_valve)
+	{endif}
+
+'	Supply line between cutoff valve and 4-way valve
+
+	(L.L.pneum_4sv_supply_valve) 1 =
+	{if}
+        (L.L.pneum_main_supply_line) s1
+		(L.L.pneum_4sv_supply_line) s2
+		(C.L.pneum_V_main_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_main_supply_line) 
+		l2 (S.L.pneum_4sv_supply_line) 
+	{endif}
+
+'	Vierkreisschutzventil (4-way valve) + tanks
+
+	(L.L.pneum_1_supply_line) (C.L.pneum_kreis_open) <
+	{if}
+        1 (S.L.pneum_4sv_valve_kreis_1)
+	{else}
+        (L.L.pneum_1_supply_line) (C.L.pneum_kreis_close) >
+        {if}
+            0 (S.L.pneum_4sv_valve_kreis_1)
+        {endif}
+	{endif}
+
+    (L.L.pneum_2_supply_line) (C.L.pneum_kreis_open) <
+    {if}
+        1 (S.L.pneum_4sv_valve_kreis_2)
+    {else}
+        (L.L.pneum_2_supply_line) (C.L.pneum_kreis_close) >
+        {if}
+            0 (S.L.pneum_4sv_valve_kreis_2)
+        {endif}
+    {endif}
+
+    (L.L.pneum_3_supply_line) (C.L.pneum_kreis_open) <
+    {if}
+        1 (S.L.pneum_4sv_valve_kreis_3)
+    {else}
+        (L.L.pneum_3_supply_line) (C.L.pneum_kreis_close) >
+        {if}
+            0 (S.L.pneum_4sv_valve_kreis_3)
+        {endif}
+    {endif}
+
+    (L.L.pneum_4_supply_line) (C.L.pneum_kreis_open) <
+    {if}
+        1 (S.L.pneum_4sv_valve_kreis_4)
+    {else}
+        (L.L.pneum_4_supply_line) (C.L.pneum_kreis_close) >
+        {if}
+            0 (S.L.pneum_4sv_valve_kreis_4)
+        {endif}
+    {endif}
+
+    (L.L.pneum_4sv_valve_kreis_1) 1 =
+    {if}
+        (L.L.pneum_4sv_supply_line) s1
+		(L.L.pneum_1_supply_line) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4sv_supply_line) 
+		l2 (S.L.pneum_1_supply_line) 
+    {endif}
+
+    (L.L.pneum_4sv_valve_kreis_2) 1 =
+    {if}
+        (L.L.pneum_4sv_supply_line) s1
+		(L.L.pneum_2_supply_line) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4sv_supply_line) 
+		l2 (S.L.pneum_2_supply_line) 
+    {endif}
+
+    (L.L.pneum_4sv_valve_kreis_3) 1 =
+    {if}
+        (L.L.pneum_4sv_supply_line) s1
+		(L.L.pneum_3_supply_line) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4sv_supply_line) 
+		l2 (S.L.pneum_3_supply_line) 
+    {endif}
+
+    (L.L.pneum_4sv_valve_kreis_4) 1 =
+    {if}
+        (L.L.pneum_4sv_supply_line) s1
+		(L.L.pneum_4_supply_line) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4sv_supply_line) 
+		l2 (S.L.pneum_4_supply_line) 
+    {endif}
+
+    (L.L.pneum_1_supply_line) (L.L.bremse_p_Tank01) >
+    {if}
+        (L.L.pneum_1_supply_line) s1
+		(L.L.bremse_p_Tank01) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.bremse_V_tank01) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_1_supply_line) 
+		l2 (S.L.bremse_p_Tank01) 
+    {endif}
+
+    (L.L.pneum_2_supply_line) (L.L.bremse_p_Tank02) >
+    {if}
+        (L.L.pneum_2_supply_line) s1
+		(L.L.bremse_p_Tank02) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.bremse_V_tank02) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_2_supply_line) 
+		l2 (S.L.bremse_p_Tank02) 
+    {endif}
+
+    (L.L.pneum_3_supply_line) (L.L.bremse_p_Tank03) >
+    {if}
+        (L.L.pneum_3_supply_line) s1
+		(L.L.bremse_p_Tank03) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.bremse_V_tank03) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_3_supply_line) 
+		l2 (S.L.bremse_p_Tank03) 
+    {endif}
+
+    (L.L.pneum_4_supply_line) (L.L.bremse_p_Tank04) >
+    {if}
+        (L.L.pneum_4_supply_line) s1
+		(L.L.bremse_p_Tank04) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.bremse_V_tank04) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4_supply_line) 
+		l2 (S.L.bremse_p_Tank04) 
+    {endif}
+
+'	Control brake cylinders for individual wheels
+
+' axle 1
+
+    (L.L.bremse_zieldruck_A1_L) (L.L.bremse_p_brzyl_A1_L) >
+	{if}
+		(L.L.bremse_zieldruck_A1_L) (L.L.bremse_p_brzyl_A1_L) - 20000000000 / (S.L.bremse_A_BrVentil_A1_L)
+
+		(L.L.bremse_p_Tank02) s1
+		(L.L.bremse_p_brzyl_A1_L) s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_Brzyl) s4
+		(L.L.bremse_A_BrVentil_A1_L) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank02) 
+		l2 (S.L.bremse_p_brzyl_A1_L) 
+    {else}
+		(L.L.bremse_p_brzyl_A1_L) (L.L.bremse_zieldruck_A1_L) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A1_L)
+
+		(L.L.bremse_p_brzyl_A1_L) s1
+		(L.L.bremse_p_luft) s2
+		(C.L.bremse_V_Brzyl) s3
+		1000000 s4
+		(L.L.bremse_A_BrVentil_A1_L) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_brzyl_A1_L) 
+	{endif}
+
+    (L.L.bremse_zieldruck_A1_R) (L.L.bremse_p_brzyl_A1_R) >
+	{if}
+		(L.L.bremse_zieldruck_A1_R) (L.L.bremse_p_brzyl_A1_R) - 20000000000 / (S.L.bremse_A_BrVentil_A1_R)
+
+		(L.L.bremse_p_Tank02) s1
+		(L.L.bremse_p_brzyl_A1_R) s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_Brzyl) s4
+		(L.L.bremse_A_BrVentil_A1_R) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank02) 
+		l2 (S.L.bremse_p_brzyl_A1_R) 
+    {else}
+		(L.L.bremse_p_brzyl_A1_R) (L.L.bremse_zieldruck_A1_R) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A1_R)
+
+		(L.L.bremse_p_brzyl_A1_R) s1
+		(L.L.bremse_p_luft) s2
+		(C.L.bremse_V_Brzyl) s3
+		1000000 s4
+		(L.L.bremse_A_BrVentil_A1_R) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_brzyl_A1_R) 
+	{endif}
+
+' axle 2
+
+    (L.L.bremse_zieldruck_A2_L) (L.L.bremse_p_brzyl_A2_L) >
+	{if}
+		(L.L.bremse_zieldruck_A2_L) (L.L.bremse_p_brzyl_A2_L) - 20000000000 / (S.L.bremse_A_BrVentil_A2_L)
+
+		(L.L.bremse_p_Tank01) s1
+		(L.L.bremse_p_brzyl_A2_L) s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_Brzyl) s4
+		(L.L.bremse_A_BrVentil_A2_L) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank01) 
+		l2 (S.L.bremse_p_brzyl_A2_L) 
+    {else}
+		(L.L.bremse_p_brzyl_A2_L) (L.L.bremse_zieldruck_A2_L) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A2_L)
+
+		(L.L.bremse_p_brzyl_A2_L) s1
+		(L.L.bremse_p_luft) s2
+		(C.L.bremse_V_Brzyl) s3
+		1000000 s4
+		(L.L.bremse_A_BrVentil_A2_L) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_brzyl_A2_L) 
+	{endif}
+
+    (L.L.bremse_zieldruck_A2_R) (L.L.bremse_p_brzyl_A2_R) >
+	{if}
+		(L.L.bremse_zieldruck_A2_R) (L.L.bremse_p_brzyl_A2_R) - 20000000000 / (S.L.bremse_A_BrVentil_A2_R)
+
+		(L.L.bremse_p_Tank01) s1
+		(L.L.bremse_p_brzyl_A2_R) s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_Brzyl) s4
+		(L.L.bremse_A_BrVentil_A2_R) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank01) 
+		l2 (S.L.bremse_p_brzyl_A2_R) 
+    {else}
+		(L.L.bremse_p_brzyl_A2_R) (L.L.bremse_zieldruck_A2_R) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A2_R)
+
+		(L.L.bremse_p_brzyl_A2_R) s1
+		(L.L.bremse_p_luft) s2
+		(C.L.bremse_V_Brzyl) s3
+		1000000 s4
+		(L.L.bremse_A_BrVentil_A2_R) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_brzyl_A2_R) 
+	{endif}
+
+' axle 2 fest
+
+    (L.L.bremse_zieldruck_Fest) (L.L.bremse_p_Brzyl_Fest) >
+	{if}
+		(L.L.bremse_zieldruck_Fest) (L.L.bremse_p_Brzyl_Fest) - 20000000000 / (S.L.bremse_A_BrVentil_Fest)
+
+		(L.L.bremse_p_Tank03) s1
+		(L.L.bremse_p_Brzyl_Fest) s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_Brzyl) s4
+		(L.L.bremse_A_BrVentil_Fest) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank03) 
+		l2 (S.L.bremse_p_Brzyl_Fest) 
+    {else}
+		(L.L.bremse_p_Brzyl_Fest) (L.L.bremse_zieldruck_Fest) - sqrt 20000000 / (S.L.bremse_A_BrVentil_Fest)
+
+		(L.L.bremse_p_Brzyl_Fest) s1
+		(L.L.bremse_p_luft) s2
+		(C.L.bremse_V_Brzyl) s3
+		1000000 s4
+		(L.L.bremse_A_BrVentil_Fest) s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Brzyl_Fest) 
+	{endif}
+
+' axle 3
+
+    (C.L.axle_count) 3 >=
+    {if}
+        (L.L.bremse_zieldruck_A3_L) (L.L.bremse_p_brzyl_A3_L) >
+        {if}
+            (L.L.bremse_zieldruck_A3_L) (L.L.bremse_p_brzyl_A3_L) - 20000000000 / (S.L.bremse_A_BrVentil_A3_L)
+
+            (L.L.bremse_p_Tank01) s1
+            (L.L.bremse_p_brzyl_A3_L) s2
+            (C.L.bremse_V_tank02) s3
+            (C.L.bremse_V_Brzyl) s4
+            (L.L.bremse_A_BrVentil_A3_L) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Tank01) 
+            l2 (S.L.bremse_p_brzyl_A3_L) 
+        {else}
+            (L.L.bremse_p_brzyl_A3_L) (L.L.bremse_zieldruck_A3_L) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A3_L)
+
+            (L.L.bremse_p_brzyl_A3_L) s1
+            (L.L.bremse_p_luft) s2
+            (C.L.bremse_V_Brzyl) s3
+            1000000 s4
+            (L.L.bremse_A_BrVentil_A3_L) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_brzyl_A3_L) 
+        {endif}
+
+        (L.L.bremse_zieldruck_A3_R) (L.L.bremse_p_brzyl_A3_R) >
+        {if}
+            (L.L.bremse_zieldruck_A3_R) (L.L.bremse_p_brzyl_A3_R) - 20000000000 / (S.L.bremse_A_BrVentil_A3_R)
+
+            (L.L.bremse_p_Tank01) s1
+            (L.L.bremse_p_brzyl_A3_R) s2
+            (C.L.bremse_V_tank02) s3
+            (C.L.bremse_V_Brzyl) s4
+            (L.L.bremse_A_BrVentil_A3_R) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Tank01) 
+            l2 (S.L.bremse_p_brzyl_A3_R) 
+        {else}
+            (L.L.bremse_p_brzyl_A3_R) (L.L.bremse_zieldruck_A3_R) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A3_R)
+
+            (L.L.bremse_p_brzyl_A3_R) s1
+            (L.L.bremse_p_luft) s2
+            (C.L.bremse_V_Brzyl) s3
+            1000000 s4
+            (L.L.bremse_A_BrVentil_A3_R) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_brzyl_A3_R) 
+        {endif}
+    {endif}
+    
+' axle 4
+
+    (C.L.axle_count) 4 >=
+    {if}
+        (L.L.bremse_zieldruck_A4_L) (L.L.bremse_p_brzyl_A4_L) >
+        {if}
+            (L.L.bremse_zieldruck_A4_L) (L.L.bremse_p_brzyl_A4_L) - 20000000000 / (S.L.bremse_A_BrVentil_A4_L)
+
+            (L.L.bremse_p_Tank01) s1
+            (L.L.bremse_p_brzyl_A4_L) s2
+            (C.L.bremse_V_tank02) s3
+            (C.L.bremse_V_Brzyl) s4
+            (L.L.bremse_A_BrVentil_A4_L) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Tank01) 
+            l2 (S.L.bremse_p_brzyl_A4_L) 
+        {else}
+            (L.L.bremse_p_brzyl_A4_L) (L.L.bremse_zieldruck_A4_L) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A4_L)
+
+            (L.L.bremse_p_brzyl_A4_L) s1
+            (L.L.bremse_p_luft) s2
+            (C.L.bremse_V_Brzyl) s3
+            1000000 s4
+            (L.L.bremse_A_BrVentil_A4_L) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_brzyl_A4_L) 
+        {endif}
+
+        (L.L.bremse_zieldruck_A4_R) (L.L.bremse_p_brzyl_A4_R) >
+        {if}
+            (L.L.bremse_zieldruck_A4_R) (L.L.bremse_p_brzyl_A4_R) - 20000000000 / (S.L.bremse_A_BrVentil_A4_R)
+
+            (L.L.bremse_p_Tank01) s1
+            (L.L.bremse_p_brzyl_A4_R) s2
+            (C.L.bremse_V_tank02) s3
+            (C.L.bremse_V_Brzyl) s4
+            (L.L.bremse_A_BrVentil_A4_R) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Tank01) 
+            l2 (S.L.bremse_p_brzyl_A4_R) 
+        {else}
+            (L.L.bremse_p_brzyl_A4_R) (L.L.bremse_zieldruck_A4_R) - sqrt 20000000 / (S.L.bremse_A_BrVentil_A4_R)
+
+            (L.L.bremse_p_brzyl_A4_R) s1
+            (L.L.bremse_p_luft) s2
+            (C.L.bremse_V_Brzyl) s3
+            1000000 s4
+            (L.L.bremse_A_BrVentil_A4_R) s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_brzyl_A4_R) 
+        {endif}
+    {endif}
+    
+'	Ambient and breakdown leaks
+
+	(L.L.pneum_main_supply_line) 120000 >
+	{if}
+        (L.L.pneum_main_supply_line) s1
+		(L.L.pneum_main_supply_line) (L.L.pneum_main_supply_line_leak) - s2
+		(C.L.pneum_V_main_supply_line) s3
+		(C.L.pneum_V_main_supply_line) s4
+		(L.L.pneum_main_supply_line_leak) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_main_supply_line) 
+	{endif}
+
+	(L.L.pneum_1_supply_line) 120000 >
+	{if}
+        (L.L.pneum_1_supply_line) s1
+		(L.L.pneum_1_supply_line) (L.L.pneum_1_supply_line_leak) - s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		(L.L.pneum_1_supply_line) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_1_supply_line) 
+	{endif}
+
+	(L.L.pneum_2_supply_line) 120000 >
+	{if}
+        (L.L.pneum_2_supply_line) s1
+		(L.L.pneum_2_supply_line) (L.L.pneum_2_supply_line_leak) - s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		(L.L.pneum_2_supply_line) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_2_supply_line) 
+	{endif}
+
+	(L.L.pneum_3_supply_line) 120000 >
+	{if}
+        (L.L.pneum_3_supply_line) s1
+		(L.L.pneum_3_supply_line) (L.L.pneum_3_supply_line_leak) - s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		(L.L.pneum_3_supply_line) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_3_supply_line) 
+	{endif}
+
+	(L.L.pneum_4_supply_line) 120000 >
+	{if}
+        (L.L.pneum_4_supply_line) s1
+		(L.L.pneum_4_supply_line) (L.L.pneum_4_supply_line_leak) 200 / - s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		(L.L.pneum_4_supply_line) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_4_supply_line) 
+	{endif}
+
+	(L.L.bremse_p_Tank01) 120000 >
+	{if}
+        (L.L.bremse_p_Tank01) s1
+		(L.L.bremse_p_Tank01) (L.L.bremse_p_Tank01_leak) 200 / - s2
+		(C.L.bremse_V_tank01) s3
+		(C.L.bremse_V_tank01) s4
+		(L.L.bremse_p_Tank01) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank01) 
+	{endif}
+
+	(L.L.bremse_p_Tank02) 120000 >
+	{if}
+        (L.L.bremse_p_Tank02) s1
+		(L.L.bremse_p_Tank02) (L.L.bremse_p_Tank02_leak) 200 / - s2
+		(C.L.bremse_V_tank02) s3
+		(C.L.bremse_V_tank02) s4
+		(L.L.bremse_p_Tank02) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank02) 
+	{endif}
+
+	(L.L.bremse_p_Tank03) 120000 >
+	{if}
+        (L.L.bremse_p_Tank03) s1
+		(L.L.bremse_p_Tank03) (L.L.bremse_p_Tank03_leak) 200 / - s2
+		(C.L.bremse_V_tank03) s3
+		(C.L.bremse_V_tank03) s4
+		(L.L.bremse_p_Tank03) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank03) 
+	{endif}
+
+	(L.L.bremse_p_Tank04) 120000 >
+	{if}
+        (L.L.bremse_p_Tank04) s1
+		(L.L.bremse_p_Tank04) (L.L.bremse_p_Tank04_leak) 200 / - s2
+		(C.L.bremse_V_tank04) s3
+		(C.L.bremse_V_tank04) s4
+		(L.L.bremse_p_Tank04) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Tank04) 
+	{endif}
+
+	(L.L.bremse_p_Balg_0_R) 120000 >
+	{if}
+        (L.L.bremse_p_Balg_0_R) s1
+		(L.L.bremse_p_Balg_0_R) (L.L.balg_0_R_leak) 200 / - s2
+		(C.L.bremse_V_balg_Vorn) s3
+		(C.L.bremse_V_balg_Vorn) s4
+		(L.L.bremse_p_Balg_0_R) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Balg_0_R) 
+	{endif}
+
+	(L.L.bremse_p_Balg_0_L) 120000 >
+	{if}
+        (L.L.bremse_p_Balg_0_L) s1
+		(L.L.bremse_p_Balg_0_L) (L.L.balg_0_L_leak) 200 / - s2
+		(C.L.bremse_V_balg_Vorn) s3
+		(C.L.bremse_V_balg_Vorn) s4
+		(L.L.bremse_p_Balg_0_L) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Balg_0_L) 
+	{endif}
+
+	(L.L.bremse_p_Balg_1_R) 120000 >
+	{if}
+        (L.L.bremse_p_Balg_1_R) s1
+		(L.L.bremse_p_Balg_1_R) (L.L.balg_1_R_leak) 200 / - s2
+		(C.L.bremse_V_balg_Hinten) s3
+		(C.L.bremse_V_balg_Hinten) s4
+		(L.L.bremse_p_Balg_1_R) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Balg_1_R) 
+	{endif}
+
+	(L.L.bremse_p_Balg_1_L) 120000 >
+	{if}
+        (L.L.bremse_p_Balg_1_L) s1
+		(L.L.bremse_p_Balg_1_L) (L.L.balg_1_L_leak) 200 / - s2
+		(C.L.bremse_V_balg_Hinten) s3
+		(C.L.bremse_V_balg_Hinten) s4
+		(L.L.bremse_p_Balg_1_L) 20000000 / s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.bremse_p_Balg_1_L) 
+	{endif}
+
+    (C.L.axle_count) 3 >=
+    {if}
+        (L.L.bremse_p_Balg_2_R) 120000 >
+        {if}
+            (L.L.bremse_p_Balg_2_R) s1
+            (L.L.bremse_p_Balg_2_R) (L.L.balg_2_R_leak) 200 / - s2
+            (C.L.bremse_V_balg_Hinten) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            (L.L.bremse_p_Balg_2_R) 20000000 / s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Balg_2_R) 
+        {endif}
+
+        (L.L.bremse_p_Balg_2_L) 120000 >
+        {if}
+            (L.L.bremse_p_Balg_2_L) s1
+            (L.L.bremse_p_Balg_2_L) (L.L.balg_2_L_leak) 200 / - s2
+            (C.L.bremse_V_balg_Hinten) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            (L.L.bremse_p_Balg_2_L) 20000000 / s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Balg_2_L) 
+        {endif}
+    {endif}
+    
+    (C.L.axle_count) 4 >=
+    {if}
+        (L.L.bremse_p_Balg_3_R) 120000 >
+        {if}
+            (L.L.bremse_p_Balg_3_R) s1
+            (L.L.bremse_p_Balg_3_R) (L.L.balg_3_R_leak) 200 / - s2
+            (C.L.bremse_V_balg_Hinten) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            (L.L.bremse_p_Balg_3_R) 20000000 / s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Balg_3_R) 
+        {endif}
+
+        (L.L.bremse_p_Balg_3_L) 120000 >
+        {if}
+            (L.L.bremse_p_Balg_3_L) s1
+            (L.L.bremse_p_Balg_3_L) (L.L.balg_3_L_leak) 200 / - s2
+            (C.L.bremse_V_balg_Hinten) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            (L.L.bremse_p_Balg_3_L) 20000000 / s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_Balg_3_L) 
+        {endif}
+    {endif}
+
+' additional variable for backwards compatibility with gearbox script
+
+    (L.L.bremse_p_brzyl_A1_L) (L.L.bremse_p_brzyl_A1_R) + 2 / (S.L.bremse_p_Brzyl_VA)
+
+    (L.L.bremse_p_brzyl_A2_L) (L.L.bremse_p_brzyl_A2_R) + 2 / (S.L.bremse_p_Brzyl_HA)
+
+'	EBA emergency brake detection
+
+	(C.L.bremse_EBA) (L.L.elec_busbar_main) &&
+	{if}
+		(L.L.Brake) 0.77 > 
+		(L.L.Velocity_sensor) 25 > &&
+		(L.L.EBA_emer_brake_detected) ! &&
+		{if}
+			1 (S.L.EBA_emer_brake_detected)
+			(M.L.lights_startblinkgeber)
+		{endif}
+
+		(L.L.Brake) 0.2 <=
+		(L.L.EBA_emer_brake_detected) &&
+		{if}
+			0 (S.L.EBA_emer_brake_detected)
+			1 (S.L.EBA_emer_brake_finished)
+		{endif}
+
+		(L.L.Velocity_sensor) 1 <
+		(L.L.EBA_emer_brake_detected) &&
+		{if}
+			1 (S.L.EBA_emer_brake_finished)
+			0 (S.L.EBA_emer_brake_detected)
+		{endif}
+
+		(L.L.throttle) 0 >
+		(L.L.lights_sw_warnblinker_sch) ||
+		(L.L.lights_sw_blinker) 0 > ||
+		(L.L.lights_sw_warnblinker) ||
+		(L.L.EBA_emer_brake_finished) &&
+		{if}
+			0 (S.L.EBA_emer_brake_finished)
+		{endif}
+	{else}
+		0 (S.L.EBA_emer_brake_finished) (S.L.EBA_emer_brake_detected)
+	{endif}
+
+	(L.L.bremse_ABS_eingriff)
+	(L.L.EBA_emer_brake_detected) ! &&
+	{if}
+		1 (S.L.EBS_retarder_restricted)
+	{else}
+		0 (S.L.EBS_retarder_restricted)
+	{endif}
+
+'   Sets target values for wheels
+
+'	Haltestellenbremse
+'	Setzen des Zieldruckes
+
+	(L.L.bremse_halte)
+	(L.L.elec_busbar_main) &&
+	(L.L.bremse_feststell) ! &&
+	(L.L.Fail_Haltbrake_true) ! &&
+	(L.L.cp_eswitch_hstbr) ! &&
+	{if}
+		(C.L.bremse_pmax_halte) (L.L.bremse_p_Tank01) min (S.L.bremse_zieldruck_halte)
+	{else}
+		100000 (S.L.bremse_zieldruck_halte)
+	{endif}	
+
+'	Sets target braking force
+
+	(L.L.EBA_emer_brake_detected) !
+	{if}
+        (L.L.bremse_luft) (L.L.bremse_p_tank01) * 1.1 * 100000 + (S.L.bremse_zieldruck_pedal)
+        (L.L.bremse_luft) (L.L.bremse_p_tank02) * 1.1 * 100000 + (S.L.bremse_zieldruck_pedal_Axle0)
+	{else}
+		1150000 (S.L.bremse_zieldruck_pedal) (S.L.bremse_zieldruck_pedal_Axle0)
+	{endif}
+
+'	Setzen des Bremszylinderzieldruckes FBA (mit uberlastschutz)
+
+	1 (L.L.bremse_feststell) - (L.L.bremse_p_tank03) * 1.1 * 100000 + s1
+	(L.L.bremse_zieldruck_A2) l1 max (S.L.bremse_zieldruck_Fest)
+
+' Blending
+
+    (L.L.antrieb_retardermoment) abs (F.L.bremse_blending) (S.L.bremse_blending_value)
+    
+' axle 1
+
+    (L.L.bremse_zieldruck_pedal_Axle0) (L.L.bremse_blending_value) * (S.L.bremse_zieldruck_A1_R) (S.L.bremse_zieldruck_A1_L)
+    
+' axle 2+3+4
+
+    (L.L.bremse_zieldruck_pedal) (L.L.bremse_blending_value) * (L.L.bremse_zieldruck_halte) max (S.L.bremse_zieldruck_A2_R) (S.L.bremse_zieldruck_A2_L) (S.L.bremse_zieldruck_A2) (S.L.bremse_zieldruck_A3_R) (S.L.bremse_zieldruck_A3_L) (S.L.bremse_zieldruck_A4_R) (S.L.bremse_zieldruck_A4_L)
+
+'   End direct control over direct braking force effects on every wheel
+
+' axle 1
+
+	(L.L.bremse_p_brzyl_A1_L) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+	(L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+	(C.L.axle_count) /
+	(S.L.Axle_Brakeforce_0_L)
+
+	(L.L.bremse_p_brzyl_A1_R) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+	(L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+	(C.L.axle_count) /
+	(S.L.Axle_Brakeforce_0_R)
+
+' axle 2
+
+	(L.L.bremse_p_brzyl_A2_L) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+	(L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+	(C.L.axle_count) /
+    (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+	(S.L.Axle_Brakeforce_1_L)
+
+	(L.L.bremse_p_brzyl_A2_R) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+	(L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+	(C.L.axle_count) /
+    (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+	(S.L.Axle_Brakeforce_1_R)
+
+' axle 3
+
+    (C.L.axle_count) 3 >=
+    {if}
+        (L.L.bremse_p_brzyl_A3_L) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+        (L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+        (C.L.axle_count) /
+        (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+        (S.L.Axle_Brakeforce_2_L)
+
+        (L.L.bremse_p_brzyl_A3_R) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+        (L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+        (C.L.axle_count) /
+        (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+        (S.L.Axle_Brakeforce_2_R)
+    {endif}
+
+' axle 4
+
+    (C.L.axle_count) 4 >=
+    {if}
+        (L.L.bremse_p_brzyl_A4_L) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+        (L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+        (C.L.axle_count) /
+        (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+        (S.L.Axle_Brakeforce_3_L)
+
+        (L.L.bremse_p_brzyl_A4_R) 100000 - 20000 - 850000 / (C.L.max_bremskraft) * s0
+        (L.L.Velocity) 3.6 / (L.L.Velocity) 3.6 / * 9.5 0.8 0.6 * * * +
+        (C.L.axle_count) /
+        (L.L.bremse_p_Brzyl_Fest) (F.L.Bremskraft_FBA) 2 / + 
+        (S.L.Axle_Brakeforce_3_R)
+    {endif}
+
+'	brake pedal reading
+
+	(L.L.Brake) (F.L.bremse_input_damping) 0.1 - 1.1 * s0 0 <
+	{if}
+		0 (S.L.bremse_luft)
+	{else}
+		l0 (S.L.bremse_luft)
+	{endif}
+	
+'	ABS subsystem
+
+	(C.L.bremse_ABS) (L.L.elec_busbar_main) &&
+	{if}
+'		Berechnen der Referenzdrehzahl
+'		Umrechnungsfaktor Geschwindigkeit (km/h) auf Raddrehzahl (1/min) = 5.64 bei Raddurchmesser 94cm
+
+'		If your bus has also a different wheel diameter:
+'		your new value = 5.64*0.94/D
+'		Where D is the diameter of the wheel set in the bus file
+
+'		�bersteigt die Drehzahldifferenz einen kritischen Wret, dann den entsprechenden Bremszylinder entl�ften
+
+		(L.L.Fail_EBS_true) 1 = !
+		(L.L.Fail_ABSASR_true) 5 = !
+		{if}
+            (L.L.Velocity_Ground) 5.56 * (S.L.bremse_ABS_referenzdrehzahl) s0
+
+            (L.L.Brake) 0.01 >
+            {if}
+
+            (C.L.axle_count) 1 >=
+            {if}
+                (L.L.Fail_ABSASR_true) 1 = !
+                {if}
+                    l0 (L.L.Wheel_RotationSpeed_0_R) - 40 >
+                    (L.L.Velocity_Ground) 3 > &&
+                    {if}
+                        (L.L.bremse_ABS_eingriff_0R) !
+                        {if}
+                            (T.L.ev_bremse_ABS_0R_on)
+                        {endif}
+                        100000 (S.L.bremse_zieldruck_A1_R)
+                        1 (S.L.bremse_ABS_eingriff_0R)
+                    {else}
+                        (L.L.bremse_ABS_eingriff_0R) 
+                        {if}
+                            (T.L.ev_bremse_ABS_0R_off)
+                        {endif}
+                        0 (S.L.bremse_ABS_eingriff_0R)
+                    {endif}
+                {endif}
+
+                (L.L.Fail_ABSASR_true) 2 = !
+                {if}
+                    l0 (L.L.Wheel_RotationSpeed_0_L) - 40 >
+                    (L.L.Velocity_Ground) 3 > &&
+                    {if}
+                        (L.L.bremse_ABS_eingriff_0L) !
+                        {if}
+                            (T.L.ev_bremse_ABS_0L_on)
+                        {endif}
+                        100000 (S.L.bremse_zieldruck_A1_L)
+                        1 (S.L.bremse_ABS_eingriff_0L)
+                    {else}
+                        (L.L.bremse_ABS_eingriff_0L) 
+                        {if}
+                            (T.L.ev_bremse_ABS_0L_off)
+                        {endif}
+                        0 (S.L.bremse_ABS_eingriff_0L)
+                    {endif}
+                {endif}
+            {endif}
+
+            (C.L.axle_count) 2 >=
+            {if}
+                (L.L.Fail_ABSASR_true) 3 = !
+                {if}
+                    l0 (L.L.Wheel_RotationSpeed_1_R) - 40 >
+                    (L.L.Velocity_Ground) 3 > &&
+                    {if}
+                        (L.L.bremse_ABS_eingriff_1R) !
+                        {if}
+                            (T.L.ev_bremse_ABS_1R_on)
+                        {endif}
+                        100000 (S.L.bremse_zieldruck_A2_R)
+                        1 (S.L.bremse_ABS_eingriff_1R)
+                    {else}
+                        (L.L.bremse_ABS_eingriff_1R) 
+                        {if}
+                            (T.L.ev_bremse_ABS_1R_off)
+                        {endif}
+                        0 (S.L.bremse_ABS_eingriff_1R)
+                    {endif}
+                {endif}
+                
+                (L.L.Fail_ABSASR_true) 4 = !
+                {if}
+                    l0 (L.L.Wheel_RotationSpeed_1_L) - 40 >
+                    (L.L.Velocity_Ground) 3 > &&
+                    {if}
+                        (L.L.bremse_ABS_eingriff_1L) !
+                        {if}
+                            (T.L.ev_bremse_ABS_1L_on)
+                        {endif}
+                        100000 (S.L.bremse_zieldruck_A2_L)
+                        1 (S.L.bremse_ABS_eingriff_1L)
+                    {else}
+                        (L.L.bremse_ABS_eingriff_1L) 
+                        {if}
+                            (T.L.ev_bremse_ABS_1L_off)
+                        {endif}
+                        0 (S.L.bremse_ABS_eingriff_1L)
+                    {endif}
+                {endif}
+            {endif}
+
+            (C.L.axle_count) 3 >=
+            {if}
+                l0 (L.L.Wheel_RotationSpeed_2_R) - 40 >
+                (L.L.Velocity_Ground) 3 > &&
+                {if}
+                    (L.L.bremse_ABS_eingriff_2R) !
+                    {if}
+                        (T.L.ev_bremse_ABS_2R_on)
+                    {endif}
+                    100000 (S.L.bremse_zieldruck_A3_R)
+                    1 (S.L.bremse_ABS_eingriff_2R)
+                {else}
+                    (L.L.bremse_ABS_eingriff_2R) 
+                    {if}
+                        (T.L.ev_bremse_ABS_2R_off)
+                    {endif}
+                    0 (S.L.bremse_ABS_eingriff_2R)
+                {endif}
+            
+                l0 (L.L.Wheel_RotationSpeed_2_L) - 40 >
+                (L.L.Velocity_Ground) 3 > &&
+                {if}
+                    (L.L.bremse_ABS_eingriff_2L) !
+                    {if}
+                        (T.L.ev_bremse_ABS_2L_on)
+                    {endif}
+                    100000 (S.L.bremse_zieldruck_A3_L)
+                    1 (S.L.bremse_ABS_eingriff_2L)
+                {else}
+                    (L.L.bremse_ABS_eingriff_2L) 
+                    {if}
+                        (T.L.ev_bremse_ABS_2L_off)
+                    {endif}
+                    0 (S.L.bremse_ABS_eingriff_2L)
+                {endif}
+            {endif}
+
+            (C.L.axle_count) 4 >=
+            {if}
+                l0 (L.L.Wheel_RotationSpeed_3_R) - 40 >
+                (L.L.Velocity_Ground) 3 > &&
+                {if}
+                    (L.L.bremse_ABS_eingriff_3R) !
+                    {if}
+                        (T.L.ev_bremse_ABS_3R_on)
+                    {endif}
+                    100000 (S.L.bremse_zieldruck_A4_R)
+                    1 (S.L.bremse_ABS_eingriff_3R)
+                {else}
+                    (L.L.bremse_ABS_eingriff_3R) 
+                    {if}
+                        (T.L.ev_bremse_ABS_3R_off)
+                    {endif}
+                    0 (S.L.bremse_ABS_eingriff_3R)
+                {endif}
+            
+                l0 (L.L.Wheel_RotationSpeed_3_L) - 40 >
+                (L.L.Velocity_Ground) 3 > &&
+                {if}
+                    (L.L.bremse_ABS_eingriff_3L) !
+                    {if}
+                        (T.L.ev_bremse_ABS_3L_on)
+                    {endif}
+                    100000 (S.L.bremse_zieldruck_A4_L)
+                    1 (S.L.bremse_ABS_eingriff_3L)
+                {else}
+                    (L.L.bremse_ABS_eingriff_3L) 
+                    {if}
+                        (T.L.ev_bremse_ABS_3L_off)
+                    {endif}
+                    0 (S.L.bremse_ABS_eingriff_3L)
+                {endif}
+            {endif}
+
+            {endif}
+
+			(L.L.bremse_ABS_eingriff_0R)
+			(L.L.bremse_ABS_eingriff_0L) ||
+			(L.L.bremse_ABS_eingriff_1R) ||
+			(L.L.bremse_ABS_eingriff_1L) ||
+			(L.L.bremse_ABS_eingriff_2R) ||
+			(L.L.bremse_ABS_eingriff_2L) ||
+            (L.L.bremse_ABS_eingriff_3R) ||
+			(L.L.bremse_ABS_eingriff_3L) ||
+			(S.L.bremse_ABS_eingriff)
+		{else}
+			0 (S.L.bremse_ABS_eingriff_0R) (S.L.bremse_ABS_eingriff_0L) (S.L.bremse_ABS_eingriff_1R) (S.L.bremse_ABS_eingriff_1L) (S.L.bremse_ABS_eingriff_2R) (S.L.bremse_ABS_eingriff_2L) (S.L.bremse_ABS_eingriff_3R) (S.L.bremse_ABS_eingriff_3L)
+		{endif}
+	{else}
+		0 (S.L.bremse_ABS_eingriff) (S.L.bremse_ABS_eingriff_0R) (S.L.bremse_ABS_eingriff_0L) (S.L.bremse_ABS_eingriff_1R) (S.L.bremse_ABS_eingriff_1L) (S.L.bremse_ABS_eingriff_2R) (S.L.bremse_ABS_eingriff_2L) (S.L.bremse_ABS_eingriff_3R) (S.L.bremse_ABS_eingriff_3L)
+	{endif}
+
+'	ABS-Selbsttest erfolgreich bei V>6km/h
+	(L.L.velocity) 6 > (L.L.bremse_ABS_selftest) &&
+	{if}
+		0 (S.L.bremse_ABS_selftest)
+	{endif}
+
+'	ASR subsystem
+
+'		If your bus has also a different wheel diameter:
+'		your new value = 5.64*0.94/D
+'		Where D is the diameter of the wheel set in the bus file
+
+	(C.L.engine_ASR)
+	(L.L.cp_ASR_off) ! &&
+	(L.L.elec_busbar_main) (C.L.elec_busbar_minV) > &&
+	{if}
+        (C.L.axle_drivetrain) 2 = 
+        {if}
+            (L.L.bremse_ABS_referenzdrehzahl) s0
+
+            l0 (L.L.Wheel_RotationSpeed_1_L) - (S.L.ASR_RotationSpeed_1_L_diff)
+            l0 (L.L.Wheel_RotationSpeed_1_R) - (S.L.ASR_RotationSpeed_1_R_diff)
+            (L.L.ASR_RotationSpeed_1_L_diff) (L.L.ASR_RotationSpeed_1_R_diff) + 2 / abs (S.L.ASR_RotationSpeed_diff)
+
+            (L.L.ASR_RotationSpeed_diff) 40 >
+            {if}
+                1 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.ASR_RotationSpeed_diff) 10 <
+            {if}
+                0 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.engine_ASR_eingriff)
+            {if}
+                (L.L.ASR_RotationSpeed_diff) (F.L.bremse_ASR_regulatorcurve) (S.L.engine_EBS_throttle_restr)
+            {else}
+                1 (S.L.engine_EBS_throttle_restr)
+            {endif}
+        {endif}
+
+        (C.L.axle_drivetrain) 3 = 
+        {if}
+            (L.L.bremse_ABS_referenzdrehzahl) s0
+
+            l0 (L.L.Wheel_RotationSpeed_2_L) - (S.L.ASR_RotationSpeed_2_L_diff)
+            l0 (L.L.Wheel_RotationSpeed_2_R) - (S.L.ASR_RotationSpeed_2_R_diff)
+            (L.L.ASR_RotationSpeed_2_L_diff) (L.L.ASR_RotationSpeed_2_R_diff) + 2 / abs (S.L.ASR_RotationSpeed_diff)
+
+            (L.L.ASR_RotationSpeed_diff) 40 >
+            {if}
+                1 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.ASR_RotationSpeed_diff) 10 <
+            {if}
+                0 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.engine_ASR_eingriff)
+            {if}
+                (L.L.ASR_RotationSpeed_diff) (F.L.bremse_ASR_regulatorcurve) (S.L.engine_EBS_throttle_restr)
+            {else}
+                1 (S.L.engine_EBS_throttle_restr)
+            {endif}
+        {endif}
+        
+        (C.L.axle_drivetrain) 23 = 
+        {if}
+            (L.L.bremse_ABS_referenzdrehzahl) s0
+            
+            l0 (L.L.Wheel_RotationSpeed_1_L) - (S.L.ASR_RotationSpeed_1_L_diff)
+            l0 (L.L.Wheel_RotationSpeed_1_R) - (S.L.ASR_RotationSpeed_1_R_diff)
+            l0 (L.L.Wheel_RotationSpeed_2_L) - (S.L.ASR_RotationSpeed_2_L_diff)
+            l0 (L.L.Wheel_RotationSpeed_2_R) - (S.L.ASR_RotationSpeed_2_R_diff)
+            (L.L.ASR_RotationSpeed_1_L_diff) (L.L.ASR_RotationSpeed_1_R_diff) + 2 / abs (L.L.ASR_RotationSpeed_2_L_diff) (L.L.ASR_RotationSpeed_2_R_diff) + 2 / abs + 2 / (S.L.ASR_RotationSpeed_diff)
+
+            (L.L.ASR_RotationSpeed_diff) 40 >
+            {if}
+                1 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.ASR_RotationSpeed_diff) 10 <
+            {if}
+                0 (S.L.engine_ASR_eingriff)
+            {endif}
+
+            (L.L.engine_ASR_eingriff)
+            {if}
+                (L.L.ASR_RotationSpeed_diff) (F.L.bremse_ASR_regulatorcurve) (S.L.engine_EBS_throttle_restr)
+            {else}
+                1 (S.L.engine_EBS_throttle_restr)
+            {endif}
+        {endif}
+	{else}
+		(L.L.elec_busbar_main) (C.L.elec_busbar_minV) >
+		{if}
+			1 (S.L.engine_ASR_eingriff)
+		{else}
+			0 (S.L.engine_ASR_eingriff)
+		{endif}
+	{endif}
+
+'	Suspension lower limits safeguards (for wheels not to clip inside the bus)
+
+	(L.L.Axle_Suspension_0_L) -0.17 <
+	{if}
+		-0.17 (S.L.Axle_Suspension_0_L)
+	{endif}
+
+	(L.L.Axle_Suspension_0_R) -0.17 <
+	{if}
+		-0.17 (S.L.Axle_Suspension_0_R)
+	{endif}
+
+    (L.L.Axle_Suspension_1_L) -0.17 <
+	{if}
+		-0.17 (S.L.Axle_Suspension_1_L)
+	{endif}
+
+	(L.L.Axle_Suspension_1_R) -0.17 <
+	{if}
+		-0.17 (S.L.Axle_Suspension_1_R)
+	{endif}
+
+    (C.L.axle_count) 3 >= 
+    {if}
+        (L.L.Axle_Suspension_2_L) -0.17 <
+        {if}
+            -0.17 (S.L.Axle_Suspension_2_L)
+        {endif}
+
+        (L.L.Axle_Suspension_2_R) -0.17 <
+        {if}
+            -0.17 (S.L.Axle_Suspension_2_R)
+        {endif}
+    {endif}
+    
+    (C.L.axle_count) 4 >= 
+    {if}
+        (L.L.Axle_Suspension_3_L) -0.17 <
+        {if}
+            -0.17 (S.L.Axle_Suspension_3_L)
+        {endif}
+
+        (L.L.Axle_Suspension_3_R) -0.17 <
+        {if}
+            -0.17 (S.L.Axle_Suspension_3_R)
+        {endif}
+    {endif}
+
+'	air supply to ECAS system
+
+    (L.L.pneum_main_supply_line) 100000 >
+    {if}
+        (L.L.pneum_main_supply_line) s1
+		(L.L.ECAS_p_supply_line) s2
+		(C.L.pneum_V_main_supply_line) s3
+		(C.L.pneum_V_4sv_supply_line) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.pneum_main_supply_line) 
+		l2 (S.L.ECAS_p_supply_line) 
+    {endif}
+
+    (L.L.ECAS_p_supply_line) 100000 >
+    {if}
+        (L.L.ECAS_p_supply_line) s1
+		(L.L.ECAS_p_Tank) s2
+		(C.L.pneum_V_4sv_supply_line) s3
+		(C.L.bremse_V_tank_ECAS) s4
+		0.001 s5
+
+		(M.L.bremse_druckausgleich)
+
+		l1 (S.L.ECAS_p_supply_line) 
+		l2 (S.L.ECAS_p_Tank) 
+    {endif}
+
+'	ECAS valve direct control/write
+
+    (L.L.ECAS_valve_allowed_0_R)
+    {if}
+        (L.L.ECAS_zieldruck_0_R) (L.L.bremse_p_balg_0_R) >
+        {if}
+            (L.L.ECAS_p_Tank) s1
+            (L.L.bremse_p_balg_0_R) s2
+            (C.L.bremse_V_tank_ECAS) s3
+            (C.L.bremse_V_balg_Vorn) s4
+            0.0000055 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.ECAS_p_Tank) 
+            l2 (S.L.bremse_p_balg_0_R) 
+        {else}
+            (L.L.bremse_p_balg_0_R) s1
+            100000 s2
+            (C.L.bremse_V_balg_Vorn) s3
+            1000000 s4
+            0.0000055 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_balg_0_R) 
+        {endif}
+    {endif}
+
+    (L.L.ECAS_valve_allowed_0_L)
+    {if}
+        (L.L.ECAS_zieldruck_0_L) (L.L.bremse_p_balg_0_L) >
+        {if}
+            (L.L.ECAS_p_Tank) s1
+            (L.L.bremse_p_balg_0_L) s2
+            (C.L.bremse_V_tank_ECAS) s3
+            (C.L.bremse_V_balg_Vorn) s4
+            0.0000055 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.ECAS_p_Tank) 
+            l2 (S.L.bremse_p_balg_0_L) 
+        {else}
+            (L.L.bremse_p_balg_0_L) s1
+            100000 s2
+            (C.L.bremse_V_balg_Vorn) s3
+            1000000 s4
+            0.0000055 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_balg_0_L) 
+        {endif}
+    {endif}
+
+    (L.L.ECAS_valve_allowed_1_R)
+    {if}
+        (L.L.ECAS_zieldruck_1_R) (L.L.bremse_p_balg_1_R) >
+        {if}
+            (L.L.ECAS_p_Tank) s1
+            (L.L.bremse_p_balg_1_R) s2
+            (C.L.bremse_V_tank_ECAS) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            0.0000058 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.ECAS_p_Tank) 
+            l2 (S.L.bremse_p_balg_1_R) 
+        {else}
+            (L.L.bremse_p_balg_1_R) s1
+            100000 s2
+            (C.L.bremse_V_balg_Hinten) s3
+            1000000 s4
+            0.0000058 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_balg_1_R) 
+        {endif}
+    {endif}
+    
+    (L.L.ECAS_valve_allowed_1_L)
+    {if}
+        (L.L.ECAS_zieldruck_1_L) (L.L.bremse_p_balg_1_L) >
+        {if}
+            (L.L.ECAS_p_Tank) s1
+            (L.L.bremse_p_balg_1_L) s2
+            (C.L.bremse_V_tank_ECAS) s3
+            (C.L.bremse_V_balg_Hinten) s4
+            0.0000058 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.ECAS_p_Tank) 
+            l2 (S.L.bremse_p_balg_1_L) 
+        {else}
+            (L.L.bremse_p_balg_1_L) s1
+            100000 s2
+            (C.L.bremse_V_balg_Hinten) s3
+            1000000 s4
+            0.0000058 s5
+
+            (M.L.bremse_druckausgleich)
+
+            l1 (S.L.bremse_p_balg_1_L) 
+        {endif}
+    {endif}
+
+    (C.L.axle_count) 3 >= 
+    {if}
+        (L.L.ECAS_valve_allowed_2_R)
+        {if}
+            (L.L.ECAS_zieldruck_2_R) (L.L.bremse_p_balg_2_R) >
+            {if}
+                (L.L.ECAS_p_Tank) s1
+                (L.L.bremse_p_balg_2_R) s2
+                (C.L.bremse_V_tank_ECAS) s3
+                (C.L.bremse_V_balg_Hinten) s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.ECAS_p_Tank) 
+                l2 (S.L.bremse_p_balg_2_R) 
+            {else}
+                (L.L.bremse_p_balg_2_R) s1
+                100000 s2
+                (C.L.bremse_V_balg_Hinten) s3
+                1000000 s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.bremse_p_balg_2_R) 
+            {endif}
+        {endif}
+
+        (L.L.ECAS_valve_allowed_2_L)
+        {if}
+            (L.L.ECAS_zieldruck_2_L) (L.L.bremse_p_balg_2_L) >
+            {if}
+                (L.L.ECAS_p_Tank) s1
+                (L.L.bremse_p_balg_2_L) s2
+                (C.L.bremse_V_tank_ECAS) s3
+                (C.L.bremse_V_balg_Hinten) s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.ECAS_p_Tank) 
+                l2 (S.L.bremse_p_balg_2_L) 
+            {else}
+                (L.L.bremse_p_balg_2_L) s1
+                100000 s2
+                (C.L.bremse_V_balg_Hinten) s3
+                1000000 s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.bremse_p_balg_2_L) 
+            {endif}
+        {endif}
+    {endif}
+
+    (C.L.axle_count) 4 >= 
+    {if}
+        (L.L.ECAS_valve_allowed_3_R)
+        {if}
+            (L.L.ECAS_zieldruck_3_R) (L.L.bremse_p_balg_3_R) >
+            {if}
+                (L.L.ECAS_p_Tank) s1
+                (L.L.bremse_p_balg_3_R) s2
+                (C.L.bremse_V_tank_ECAS) s3
+                (C.L.bremse_V_balg_Hinten) s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.ECAS_p_Tank) 
+                l2 (S.L.bremse_p_balg_3_R) 
+            {else}
+                (L.L.bremse_p_balg_3_R) s1
+                100000 s2
+                (C.L.bremse_V_balg_Hinten) s3
+                1000000 s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.bremse_p_balg_3_R) 
+            {endif}
+        {endif}
+
+        (L.L.ECAS_valve_allowed_3_L)
+        {if}
+            (L.L.ECAS_zieldruck_3_L) (L.L.bremse_p_balg_3_L) >
+            {if}
+                (L.L.ECAS_p_Tank) s1
+                (L.L.bremse_p_balg_3_L) s2
+                (C.L.bremse_V_tank_ECAS) s3
+                (C.L.bremse_V_balg_Hinten) s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.ECAS_p_Tank) 
+                l2 (S.L.bremse_p_balg_3_L) 
+            {else}
+                (L.L.bremse_p_balg_3_L) s1
+                100000 s2
+                (C.L.bremse_V_balg_Hinten) s3
+                1000000 s4
+                0.0000058 s5
+
+                (M.L.bremse_druckausgleich)
+
+                l1 (S.L.bremse_p_balg_3_L) 
+            {endif}
+        {endif}
+    {endif}
+
+'	ECAS valve & electronic central unit logic (converts to 0-255 counts alike mentioned in Wabco ECAS service manual)
+
+    (L.L.ECAS_clock) (L.S.Timegap) + 0.3 min (S.L.ECAS_clock)
+
+    (L.L.ECAS_p_Tank) 650000 >
+    {if}
+        1 (S.L.ECAS_pressure_ok)
+    {else}
+        (L.L.ECAS_p_Tank) 420000 <
+        {if}
+            0 (S.L.ECAS_pressure_ok)
+        {endif}
+    {endif}
+
+	(L.L.vdv_display_startuptime) 5 >
+	{if}
+        (L.L.ECAS_clock) 0.3 >=
+        {if}
+            (L.L.Axle_Suspension_0_R) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_0_R_curr_level)
+            (L.L.Axle_Suspension_0_L) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_0_L_curr_level)
+            (L.L.Axle_Suspension_1_R) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_1_R_curr_level)
+            (L.L.Axle_Suspension_1_L) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_1_L_curr_level)
+
+            (C.L.axle_count) 3 >= 
+            {if}
+                (L.L.Axle_Suspension_2_R) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_2_R_curr_level)
+                (L.L.Axle_Suspension_2_L) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_2_L_curr_level)
+            {endif}
+            
+            (C.L.axle_count) 4 >= 
+            {if}
+                (L.L.Axle_Suspension_3_R) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_3_R_curr_level)
+                (L.L.Axle_Suspension_3_L) (F.L.ECAS_counts_convert) trunc (L.L.wagenkasten_anheben) trunc 80 * - (S.L.ECAS_3_L_curr_level)
+            {endif}
+        {endif}
+
+        (L.L.doorTarget_0) !
+        (L.L.doorTarget_01) ! &&
+        (L.L.doorTarget_23) ! &&
+        (L.L.doorTarget_45) ! &&
+        (L.L.doorTarget_67) ! &&
+        (L.L.Velocity) 3 < &&
+        (L.L.wagenkasten_anheben) 0 > ||
+        {if}
+            1 (S.L.ECAS_relevel_allowed)
+        {else}
+            0 (S.L.ECAS_relevel_allowed)
+        {endif}
+
+		(L.L.enable_auto_kneeling) 1 =
+		(L.L.vis_autokneel_type) 2 = ||
+		(L.L.vis_autokneel_type) 3 = ||
+		(L.L.vis_autokneel_type) 4 = ||
+		{if}
+			(L.L.cg_active)
+			(L.L.doorTarget_23) ||
+			(L.L.doorTarget_45) ||
+			(L.L.doorTarget_67) ||
+			(L.L.enable_auto_kneel_override) ! &&
+			(L.L.enable_killauto_kneeling) ! &&
+			(L.L.elec_busbar_main) &&
+			(L.L.engine_timer_start) 4 > &&
+			{if}
+				1 (S.L.ECAS_kneel_allowed)
+			{else}
+				(L.L.cp_kneel_down_mode) 1 =
+				(L.L.elec_busbar_main) &&
+				(L.L.engine_timer_start) 4 > &&
+				{if}
+					1 (S.L.ECAS_kneel_allowed)
+				{else}
+					(L.L.door_2) 1 <
+					(L.L.door_3) 1 < &&
+					(L.L.door_4) 1 < &&
+					(L.L.door_5) 1 < &&
+					(L.L.door_6) 1 < &&
+					(L.L.door_7) 1 < &&
+					(L.L.cg_active) ! &&
+					(L.L.cp_kneel_up_mode) 1 = ||
+					{if}
+						0 (S.L.ECAS_kneel_allowed) (S.L.enable_auto_kneel_override)
+					{endif}
+				{endif}
+			{endif}
+        {else}
+			(L.L.cp_kneel_down_mode) 1 =
+			(L.L.elec_busbar_main) &&
+			(L.L.engine_timer_start) 4 > &&
+			{if}
+				1 (S.L.ECAS_kneel_allowed)
+			{else}
+				(L.L.door_2) 1 <
+				(L.L.door_3) 1 < &&
+				(L.L.door_4) 1 < &&
+				(L.L.door_5) 1 < &&
+				(L.L.door_6) 1 < &&
+				(L.L.door_7) 1 < &&
+				(L.L.cg_active) ! &&
+				(L.L.cp_kneel_up_mode) 1 = ||
+				{if}
+					0 (S.L.ECAS_kneel_allowed) (S.L.enable_auto_kneel_override)
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.Fail_ECAS_true) 1 =
+		(L.L.cp_kneel_up_mode) 1 = ||
+		(L.L.engine_timer_start) 4 > &&
+		{if}
+			0 (S.L.ECAS_kneel_allowed)
+			1 (S.L.enable_auto_kneel_override)
+		{endif}
+
+        (L.L.cp_ecas_awaryjnieUP_sw) 1 =
+        {if}
+            0 (S.L.ECAS_kneel_allowed)
+            1 (S.L.enable_auto_kneel_override)
+        {endif}
+
+        (L.L.anheben_sw)
+        (L.L.elec_busbar_main) &&
+        (L.L.ECAS_pressure_ok) &&
+        (L.L.Fail_ECAS_true) 1 = ! &&
+        (L.L.Velocity) 13 < &&
+        {if}
+            0.3 (L.S.Timegap) * (L.L.wagenkasten_anheben) + 1 min (S.L.wagenkasten_anheben)
+            0 (S.L.wagenkasten_anheben_timer)
+        {endif}
+        
+        (L.L.Velocity) 14 >
+        (L.L.cp_kneel_up_mode) 1 = ||
+        (L.L.cp_kneel_down_mode) 1 = ||
+        {if}
+            0 (S.L.wagenkasten_anheben)
+            0 (S.L.wagenkasten_anheben_timer)
+        {endif}
+            
+        (L.L.wagenkasten_anheben) 0 >
+        (L.L.Fail_ECAS_true) 1 = ! &&
+        {if}
+            (L.L.wagenkasten_anheben_timer) (L.S.Timegap) + 30 min (S.L.wagenkasten_anheben_timer)
+            30 =
+            {if}
+                -0.5 (L.S.Timegap) * (L.L.wagenkasten_anheben) + 0 max (S.L.wagenkasten_anheben)
+            {endif}
+        {else}
+            (L.L.wagenkasten_anheben_timer) 30 =
+            {if}
+                0 (S.L.wagenkasten_anheben)
+            {endif}
+        {endif}
+
+        (L.L.wagenkasten_anheben) 0.5 <
+        (L.L.anheben_sw) &&
+        (L.L.Fail_ECAS_true) 1 = ! &&
+        {if}
+            1 (S.L.anheben_sound)
+        {else}
+            0 (S.L.anheben_sound)
+        {endif}
+
+        (L.L.ECAS_0_R_curr_level) (L.L.ECAS_1_R_curr_level) + 2 / s0
+
+        
+	{else}
+		0 (S.L.ECAS_relevel_allowed) (S.L.ECAS_kneel_allowed) (S.L.wagenkasten_anheben) (S.L.wagenkasten_anheben_timer)
+        0 (S.L.ECAS_0_R_curr_level) (S.L.ECAS_0_L_curr_level)
+        0 (S.L.ECAS_1_R_curr_level) (S.L.ECAS_1_L_curr_level)
+        0 (S.L.ECAS_2_R_curr_level) (S.L.ECAS_2_L_curr_level)
+        0 (S.L.ECAS_3_R_curr_level) (S.L.ECAS_3_L_curr_level)
+	{endif}
+
+'   Kneel sounds
+
+	(L.L.cp_eswitch_hstbr) !
+	{if}
+        (L.L.ECAS_clock) 0.3 >=
+        {if}
+            (L.L.ECAS_kneel_allowed)
+            (L.L.Velocity) 2 < &&
+            (L.L.Fail_ECAS_true) 1 = ! &&
+            {if}
+                1 (S.L.bremse_halte)
+                (L.L.sound_antirepeat_down) 1 + (S.L.sound_antirepeat_down)	
+                (L.L.sound_antirepeat_down) 1 =
+                {if}
+                    2 random (S.L.ev_kneel_var)
+                    (T.L.kneel_sound)
+                    0 (S.L.sound_antirepeat_up)
+                {endif}
+            {else}
+                (L.L.sound_antirepeat_up) 1 + (S.L.sound_antirepeat_up)	
+                (L.L.sound_antirepeat_up) 1 =
+                {if}
+                    2 random (S.L.ev_kneel_var)
+                    (T.L.kneel_sound_up)
+                    0 (S.L.sound_antirepeat_down)
+                {endif}
+            {endif}
+        {endif}
+	{else}
+		0 (S.L.bremse_halte)
+	{endif}
+
+    (L.L.ECAS_kneel_allowed) (S.L.kneel_allowed)
+
+    (L.L.ECAS_kneel_allowed) (L.L.ECAS_kneel_allowed_last) = !
+    (L.L.cp_kneel_up_mode) ||
+    (L.L.enable_auto_kneel_override) ||
+    (L.L.vdv_display_startuptime) 5 > &&
+    {if}
+        (L.L.vdv_display_startuptime) 5 > &&
+        {if}
+            1 (S.L.ECAS_kneel_immidiate_command)
+            15 (S.L.ECAS_offset_count_0_R)
+            15 (S.L.ECAS_offset_count_1_R)
+            15 (S.L.ECAS_offset_count_2_R)
+            15 (S.L.ECAS_offset_count_3_R)
+
+            (L.L.ECAS_kneel_allowed) (S.L.ECAS_kneel_allowed_last)
+        {endif}
+    {endif}
+
+    (L.L.ECAS_relevel_allowed) 1 >=
+    (L.L.ECAS_kneel_allowed) 1 = ||
+    (L.L.ECAS_kneel_immidiate_command) 1 = ||
+    (L.L.ECAS_pressure_ok) &&
+    {if}
+        (L.L.ECAS_clock) 0.3 >=
+        {if}
+
+' BALG - 0 - R
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (L.L.ECAS_kneel_allowed) 1 >=
+            {if}
+                (L.L.ECAS_0_R_curr_level) 2 >
+                {if}
+                    (L.L.ECAS_offset_count_0_R) 1 + 15 min (S.L.ECAS_offset_count_0_R)
+                {else}
+                    0 (S.L.ECAS_offset_count_0_R)
+                {endif}
+            {else}
+                (L.L.ECAS_0_R_curr_level) 102 <
+                (L.L.ECAS_0_R_curr_level) 145 > ||
+                (L.L.ECAS_target_reached_0_R) ! &&
+                {if}
+                    (L.L.ECAS_offset_count_0_R) 1 + 15 min (S.L.ECAS_offset_count_0_R)
+                {else}
+                    0 (S.L.ECAS_offset_count_0_R)
+                {endif}
+            {endif}
+
+' Step II - save relevel as in progress
+
+            (L.L.ECAS_offset_count_0_R) 6 >
+            (L.L.ECAS_kneel_immidiate_command) 1 = ||
+            {if}
+                (L.L.ECAS_relevel_active_0_R) !
+                {if}
+                    (L.L.bremse_p_balg_0_R) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_0_R)
+                    1 (S.L.ECAS_relevel_active_0_R)
+                {endif}
+            {else}
+                (L.L.ECAS_0_R_curr_level) 120 >
+                (L.L.ECAS_0_R_curr_level) 135 < &&
+                {if}
+                    0 (S.L.ECAS_relevel_active_0_R)
+                {endif}
+            {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+            (L.L.bremse_p_balg_0_R) 10000 / trunc (L.L.ECAS_zieldruck_0_R) 10000 / trunc =
+            {if}
+                1 (S.L.ECAS_target_reached_0_R)
+                0 (S.L.ECAS_valve_allowed_0_R)
+            {else}
+                0 (S.L.ECAS_target_reached_0_R)
+                
+                (L.L.ECAS_relevel_active_0_R)
+                {if}
+                    1 (S.L.ECAS_valve_allowed_0_R)
+                {else}
+                    0 (S.L.ECAS_valve_allowed_0_R)
+                {endif}
+            {endif}
+
+            (L.L.ECAS_relevel_active_0_R)
+            {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                (L.L.ECAS_kneel_allowed) 1 >=
+                {if}
+                    (L.L.ECAS_target_reached_0_R)
+                    {if}
+                        (L.L.ECAS_0_R_curr_level) 2 >
+                        {if}
+                            (L.L.ECAS_zieldruck_0_R) (L.L.ECAS_0_R_curr_level) (F.L.ECAS_reg_kneel) - 100000 max (S.L.ECAS_zieldruck_0_R)
+                        {endif}
+                    {endif}
+                {else}
+                    (L.L.ECAS_target_reached_0_R)
+                    {if}
+                        (L.L.ECAS_0_R_curr_level) 120 <
+                        {if}
+                            (L.L.ECAS_zieldruck_0_R) (L.L.ECAS_0_R_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_0_R)
+                        {endif}
+                        
+                        (L.L.ECAS_0_R_curr_level) 135 >
+                        {if}
+                            (L.L.ECAS_zieldruck_0_R) (L.L.ECAS_0_R_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_0_R)
+                        {endif}
+                    {endif}
+                {endif}
+            {endif}
+
+' BALG - 0 - L
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (L.L.ECAS_0_L_curr_level) 102 <
+            (L.L.ECAS_0_L_curr_level) 145 > ||
+            (L.L.ECAS_target_reached_0_L) ! &&
+            {if}
+                (L.L.ECAS_offset_count_0_L) 1 + 15 min (S.L.ECAS_offset_count_0_L)
+            {else}
+                0 (S.L.ECAS_offset_count_0_L)
+            {endif}
+
+' Step II - save relevel as in progress
+
+            (L.L.ECAS_offset_count_0_L) 6 >
+            (L.L.ECAS_kneel_immidiate_command) 1 = ||
+            {if}
+                (L.L.ECAS_relevel_active_0_L) !
+                {if}
+                    (L.L.bremse_p_balg_0_L) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_0_L)
+                    1 (S.L.ECAS_relevel_active_0_L)
+                {endif}
+            {else}
+                (L.L.ECAS_0_L_curr_level) 120 >
+                (L.L.ECAS_0_L_curr_level) 135 < &&
+                {if}
+                    0 (S.L.ECAS_relevel_active_0_L)
+                {endif}
+            {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+            (L.L.bremse_p_balg_0_L) 10000 / trunc (L.L.ECAS_zieldruck_0_L) 10000 / trunc =
+            {if}
+                1 (S.L.ECAS_target_reached_0_L)
+                0 (S.L.ECAS_valve_allowed_0_L)
+            {else}
+                0 (S.L.ECAS_target_reached_0_L)
+
+                (L.L.ECAS_relevel_active_0_L)
+                {if}
+                    1 (S.L.ECAS_valve_allowed_0_L)
+                {else}
+                    0 (S.L.ECAS_valve_allowed_0_L)
+                {endif}
+            {endif}
+
+            (L.L.ECAS_relevel_active_0_L)
+            {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                (L.L.ECAS_target_reached_0_L)
+                {if}
+                    (L.L.ECAS_0_L_curr_level) 120 <
+                    {if}
+                        (L.L.ECAS_zieldruck_0_L) (L.L.ECAS_0_L_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_0_L)
+                    {endif}
+                    
+                    (L.L.ECAS_0_L_curr_level) 135 >
+                    {if}
+                        (L.L.ECAS_zieldruck_0_L) (L.L.ECAS_0_L_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_0_L)
+                    {endif}
+                {endif}
+            {endif}
+
+' BALG - 1 - R
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (L.L.ECAS_kneel_allowed) 1 >=
+            {if}
+                (L.L.ECAS_1_R_curr_level) 2 >
+                {if}
+                    (L.L.ECAS_offset_count_1_R) 1 + 15 min (S.L.ECAS_offset_count_1_R)
+                {else}
+                    0 (S.L.ECAS_offset_count_1_R)
+                {endif}
+            {else}
+                (L.L.ECAS_1_R_curr_level) 102 <
+                (L.L.ECAS_1_R_curr_level) 145 > ||
+                (L.L.ECAS_target_reached_1_R) ! &&
+                {if}
+                    (L.L.ECAS_offset_count_1_R) 1 + 15 min (S.L.ECAS_offset_count_1_R)
+                {else}
+                    0 (S.L.ECAS_offset_count_1_R)
+                {endif}
+            {endif}
+
+' Step II - save relevel as in progress
+
+            (L.L.ECAS_offset_count_1_R) 6 >
+            (L.L.ECAS_kneel_immidiate_command) 1 = ||
+            {if}
+                (L.L.ECAS_relevel_active_1_R) !
+                {if}
+                    (L.L.bremse_p_balg_1_R) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_1_R)
+                    1 (S.L.ECAS_relevel_active_1_R)
+                {endif}
+            {else}
+                (L.L.ECAS_1_R_curr_level) 120 >
+                (L.L.ECAS_1_R_curr_level) 135 < &&
+                {if}
+                    0 (S.L.ECAS_relevel_active_1_R)
+                {endif}
+            {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+            (L.L.bremse_p_balg_1_R) 10000 / trunc (L.L.ECAS_zieldruck_1_R) 10000 / trunc =
+            {if}
+                1 (S.L.ECAS_target_reached_1_R)
+                0 (S.L.ECAS_valve_allowed_1_R)
+            {else}
+                0 (S.L.ECAS_target_reached_1_R)
+
+                (L.L.ECAS_relevel_active_1_R)
+                {if}
+                    1 (S.L.ECAS_valve_allowed_1_R)
+                {else}
+                    0 (S.L.ECAS_valve_allowed_1_R)
+                {endif}
+            {endif}
+
+            (L.L.ECAS_relevel_active_1_R)
+            {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                (L.L.ECAS_kneel_allowed) 1 >=
+                {if}
+                    (L.L.ECAS_target_reached_1_R)
+                    {if}
+                        (L.L.ECAS_1_R_curr_level) 2 >
+                        {if}
+                            (L.L.ECAS_zieldruck_1_R) (L.L.ECAS_1_R_curr_level) (F.L.ECAS_reg_kneel) - (S.L.ECAS_zieldruck_1_R)
+                        {endif}
+                    {endif}
+                {else}
+                    (L.L.ECAS_target_reached_1_R)
+                    {if}
+                        (L.L.ECAS_1_R_curr_level) 120 <
+                        {if}
+                            (L.L.ECAS_zieldruck_1_R) (L.L.ECAS_1_R_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_1_R)
+                        {endif}
+                        
+                        (L.L.ECAS_1_R_curr_level) 135 >
+                        {if}
+                            (L.L.ECAS_zieldruck_1_R) (L.L.ECAS_1_R_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_1_R)
+                        {endif}
+                    {endif}
+                {endif}
+            {endif}
+
+' BALG - 1 - L
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (L.L.ECAS_1_L_curr_level) 102 <
+            (L.L.ECAS_1_L_curr_level) 145 > ||
+            (L.L.ECAS_target_reached_1_L) ! &&
+            {if}
+                (L.L.ECAS_offset_count_1_L) 1 + 15 min (S.L.ECAS_offset_count_1_L)
+            {else}
+                0 (S.L.ECAS_offset_count_1_L)
+            {endif}
+
+' Step II - save relevel as in progress
+
+            (L.L.ECAS_offset_count_1_L) 6 >
+            (L.L.ECAS_kneel_immidiate_command) 1 = ||
+            {if}
+                (L.L.ECAS_relevel_active_1_L) !
+                {if}
+                    (L.L.bremse_p_balg_1_L) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_1_L)
+                    1 (S.L.ECAS_relevel_active_1_L)
+                {endif}
+            {else}
+                (L.L.ECAS_1_L_curr_level) 120 >
+                (L.L.ECAS_1_L_curr_level) 135 < &&
+                {if}
+                    0 (S.L.ECAS_relevel_active_1_L)
+                {endif}
+            {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+            (L.L.bremse_p_balg_1_L) 10000 / trunc (L.L.ECAS_zieldruck_1_L) 10000 / trunc =
+            {if}
+                1 (S.L.ECAS_target_reached_1_L)
+                0 (S.L.ECAS_valve_allowed_1_L)
+            {else}
+                0 (S.L.ECAS_target_reached_1_L)
+
+                (L.L.ECAS_relevel_active_1_L)
+                {if}
+                    1 (S.L.ECAS_valve_allowed_1_L)
+                {else}
+                    0 (S.L.ECAS_valve_allowed_1_L)
+                {endif}
+            {endif}
+
+            (L.L.ECAS_relevel_active_1_L)
+            {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                (L.L.ECAS_target_reached_1_L)
+                {if}
+                    (L.L.ECAS_1_L_curr_level) 120 <
+                    {if}
+                        (L.L.ECAS_zieldruck_1_L) (L.L.ECAS_1_L_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_1_L)
+                    {endif}
+                    
+                    (L.L.ECAS_1_L_curr_level) 135 >
+                    {if}
+                        (L.L.ECAS_zieldruck_1_L) (L.L.ECAS_1_L_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_1_L)
+                    {endif}
+                {endif}
+            {endif}
+
+' BALG - 2 - R
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (C.L.axle_count) 3 >= 
+            {if}
+                (L.L.ECAS_kneel_allowed) 1 >=
+                {if}
+                    (L.L.ECAS_2_R_curr_level) 2 >
+                    {if}
+                        (L.L.ECAS_offset_count_2_R) 1 + 15 min (S.L.ECAS_offset_count_2_R)
+                    {else}
+                        0 (S.L.ECAS_offset_count_2_R)
+                    {endif}
+                {else}
+                    (L.L.ECAS_2_R_curr_level) 102 <
+                    (L.L.ECAS_2_R_curr_level) 145 > ||
+                    (L.L.ECAS_target_reached_2_R) ! &&
+                    {if}
+                        (L.L.ECAS_offset_count_2_R) 1 + 15 min (S.L.ECAS_offset_count_2_R)
+                    {else}
+                        0 (S.L.ECAS_offset_count_2_R)
+                    {endif}
+                {endif}
+
+' Step II - save relevel as in progress
+
+                (L.L.ECAS_offset_count_2_R) 6 >
+                (L.L.ECAS_kneel_immidiate_command) 1 = ||
+                {if}
+                    (L.L.ECAS_relevel_active_2_R) !
+                    {if}
+                        (L.L.bremse_p_balg_2_R) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_2_R)
+                        1 (S.L.ECAS_relevel_active_2_R)
+                    {endif}
+                {else}
+                    (L.L.ECAS_2_R_curr_level) 120 >
+                    (L.L.ECAS_2_R_curr_level) 135 < &&
+                    {if}
+                        0 (S.L.ECAS_relevel_active_2_R)
+                    {endif}
+                {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+                (L.L.bremse_p_balg_2_R) 10000 / trunc (L.L.ECAS_zieldruck_2_R) 10000 / trunc =
+                {if}
+                    1 (S.L.ECAS_target_reached_2_R)
+                    0 (S.L.ECAS_valve_allowed_2_R)
+                {else}
+                    0 (S.L.ECAS_target_reached_2_R)
+
+                    (L.L.ECAS_relevel_active_2_R)
+                    {if}
+                        1 (S.L.ECAS_valve_allowed_2_R)
+                    {else}
+                        0 (S.L.ECAS_valve_allowed_2_R)
+                    {endif}
+                {endif}
+
+                (L.L.ECAS_relevel_active_2_R)
+                {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                    (L.L.ECAS_kneel_allowed) 1 >=
+                    {if}
+                        (L.L.ECAS_target_reached_2_R)
+                        {if}
+                            (L.L.ECAS_2_R_curr_level) 2 >
+                            {if}
+                                (L.L.ECAS_zieldruck_2_R) (L.L.ECAS_2_R_curr_level) (F.L.ECAS_reg_kneel) - (S.L.ECAS_zieldruck_2_R)
+                            {endif}
+                        {endif}
+                    {else}
+                        (L.L.ECAS_target_reached_2_R)
+                        {if}
+                            (L.L.ECAS_2_R_curr_level) 120 <
+                            {if}
+                                (L.L.ECAS_zieldruck_2_R) (L.L.ECAS_2_R_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_2_R)
+                            {endif}
+                            
+                            (L.L.ECAS_2_R_curr_level) 135 >
+                            {if}
+                                (L.L.ECAS_zieldruck_2_R) (L.L.ECAS_2_R_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_2_R)
+                            {endif}
+                        {endif}
+                    {endif}
+                {endif}
+
+' BALG - 2 - L
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+                (L.L.ECAS_2_L_curr_level) 102 <
+                (L.L.ECAS_2_L_curr_level) 145 > ||
+                (L.L.ECAS_target_reached_2_L) ! &&
+                {if}
+                    (L.L.ECAS_offset_count_2_L) 1 + 15 min (S.L.ECAS_offset_count_2_L)
+                {else}
+                    0 (S.L.ECAS_offset_count_2_L)
+                {endif}
+
+' Step II - save relevel as in progress
+
+                (L.L.ECAS_offset_count_2_L) 6 >
+                (L.L.ECAS_kneel_immidiate_command) 1 = ||
+                {if}
+                    (L.L.ECAS_relevel_active_2_L) !
+                    {if}
+                        (L.L.bremse_p_balg_2_L) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_2_L)
+                        1 (S.L.ECAS_relevel_active_2_L)
+                    {endif}
+                {else}
+                    (L.L.ECAS_2_L_curr_level) 120 >
+                    (L.L.ECAS_2_L_curr_level) 135 < &&
+                    {if}
+                        0 (S.L.ECAS_relevel_active_2_L)
+                    {endif}
+                {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+                (L.L.bremse_p_balg_2_L) 10000 / trunc (L.L.ECAS_zieldruck_2_L) 10000 / trunc =
+                {if}
+                    1 (S.L.ECAS_target_reached_2_L)
+                    0 (S.L.ECAS_valve_allowed_2_L)
+                {else}
+                    0 (S.L.ECAS_target_reached_2_L)
+
+                    (L.L.ECAS_relevel_active_2_L)
+                    {if}
+                        1 (S.L.ECAS_valve_allowed_2_L)
+                    {else}
+                        0 (S.L.ECAS_valve_allowed_2_L)
+                    {endif}
+                {endif}
+
+                (L.L.ECAS_relevel_active_2_L)
+                {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                    (L.L.ECAS_target_reached_2_L)
+                    {if}
+                        (L.L.ECAS_2_L_curr_level) 120 <
+                        {if}
+                            (L.L.ECAS_zieldruck_2_L) (L.L.ECAS_2_L_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_2_L)
+                        {endif}
+                        
+                        (L.L.ECAS_2_L_curr_level) 135 >
+                        {if}
+                            (L.L.ECAS_zieldruck_2_L) (L.L.ECAS_2_L_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_2_L)
+                        {endif}
+                    {endif}
+                {endif}
+            {endif}
+
+' BALG - 3 - R
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+            (C.L.axle_count) 4 >= 
+            {if}
+                (L.L.ECAS_kneel_allowed) 1 >=
+                {if}
+                    (L.L.ECAS_3_R_curr_level) 2 >
+                    {if}
+                        (L.L.ECAS_offset_count_3_R) 1 + 15 min (S.L.ECAS_offset_count_3_R)
+                    {else}
+                        0 (S.L.ECAS_offset_count_3_R)
+                    {endif}
+                {else}
+                    (L.L.ECAS_3_R_curr_level) 102 <
+                    (L.L.ECAS_3_R_curr_level) 145 > ||
+                    (L.L.ECAS_target_reached_3_R) ! &&
+                    {if}
+                        (L.L.ECAS_offset_count_3_R) 1 + 15 min (S.L.ECAS_offset_count_3_R)
+                    {else}
+                        0 (S.L.ECAS_offset_count_3_R)
+                    {endif}
+                {endif}
+
+' Step II - save relevel as in progress
+
+                (L.L.ECAS_offset_count_3_R) 6 >
+                (L.L.ECAS_kneel_immidiate_command) 1 = ||
+                {if}
+                    (L.L.ECAS_relevel_active_3_R) !
+                    {if}
+                        (L.L.bremse_p_balg_3_R) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_3_R)
+                        1 (S.L.ECAS_relevel_active_3_R)
+                    {endif}
+                {else}
+                    (L.L.ECAS_3_R_curr_level) 120 >
+                    (L.L.ECAS_3_R_curr_level) 135 < &&
+                    {if}
+                        0 (S.L.ECAS_relevel_active_3_R)
+                    {endif}
+                {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+                (L.L.bremse_p_balg_3_R) 10000 / trunc (L.L.ECAS_zieldruck_3_R) 10000 / trunc =
+                {if}
+                    1 (S.L.ECAS_target_reached_3_R)
+                    0 (S.L.ECAS_valve_allowed_3_R)
+                {else}
+                    0 (S.L.ECAS_target_reached_3_R)
+
+                    (L.L.ECAS_relevel_active_3_R)
+                    {if}
+                        1 (S.L.ECAS_valve_allowed_3_R)
+                    {else}
+                        0 (S.L.ECAS_valve_allowed_3_R)
+                    {endif}
+                {endif}
+
+                (L.L.ECAS_relevel_active_3_R)
+                {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                    (L.L.ECAS_kneel_allowed) 1 >=
+                    {if}
+                        (L.L.ECAS_target_reached_3_R)
+                        {if}
+                            (L.L.ECAS_3_R_curr_level) 2 >
+                            {if}
+                                (L.L.ECAS_zieldruck_3_R) (L.L.ECAS_3_R_curr_level) (F.L.ECAS_reg_kneel) - (S.L.ECAS_zieldruck_3_R)
+                            {endif}
+                        {endif}
+                    {else}
+                        (L.L.ECAS_target_reached_3_R)
+                        {if}
+                            (L.L.ECAS_3_R_curr_level) 120 <
+                            {if}
+                                (L.L.ECAS_zieldruck_3_R) (L.L.ECAS_3_R_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_3_R)
+                            {endif}
+                            
+                            (L.L.ECAS_3_R_curr_level) 135 >
+                            {if}
+                                (L.L.ECAS_zieldruck_3_R) (L.L.ECAS_3_R_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_3_R)
+                            {endif}
+                        {endif}
+                    {endif}
+                {endif}
+
+' BALG - 3 - L
+
+' Step I - check offset + count how many cycles ecas was at offset - 10 cycles = 3.0 s, aim for 5 cycles = 1.5 s
+
+                (L.L.ECAS_3_L_curr_level) 102 <
+                (L.L.ECAS_3_L_curr_level) 145 > ||
+                (L.L.ECAS_target_reached_0_L) ! &&
+                {if}
+                    (L.L.ECAS_offset_count_3_L) 1 + 15 min (S.L.ECAS_offset_count_3_L)
+                {else}
+                    0 (S.L.ECAS_offset_count_3_L)
+                {endif}
+
+' Step II - save relevel as in progress
+
+                (L.L.ECAS_offset_count_3_L) 6 >
+                (L.L.ECAS_kneel_immidiate_command) 1 = ||
+                {if}
+                    (L.L.ECAS_relevel_active_3_L) !
+                    {if}
+                        (L.L.bremse_p_balg_3_L) 10000 / trunc 10000 * (S.L.ECAS_zieldruck_3_L)
+                        1 (S.L.ECAS_relevel_active_3_L)
+                    {endif}
+                {else}
+                    (L.L.ECAS_3_L_curr_level) 120 >
+                    (L.L.ECAS_3_L_curr_level) 135 < &&
+                    {if}
+                        0 (S.L.ECAS_relevel_active_3_L)
+                    {endif}
+                {endif}
+
+' Step III - set new target pressure
+
+' Step IIIa - set flag wheater or not new target pressure was reached
+
+                (L.L.bremse_p_balg_3_L) 10000 / trunc (L.L.ECAS_zieldruck_3_L) 10000 / trunc =
+                {if}
+                    1 (S.L.ECAS_target_reached_3_L)
+                    0 (S.L.ECAS_valve_allowed_3_L)
+                {else}
+                    0 (S.L.ECAS_target_reached_3_L)
+
+                    (L.L.ECAS_relevel_active_3_L)
+                    {if}
+                        1 (S.L.ECAS_valve_allowed_3_L)
+                    {else}
+                        0 (S.L.ECAS_valve_allowed_3_L)
+                    {endif}
+                {endif}
+
+                (L.L.ECAS_relevel_active_3_L)
+                {if}
+
+' Step IIIb - if target was reached and offset is still too big, update target pressure
+
+                    (L.L.ECAS_target_reached_3_L)
+                    {if}
+                        (L.L.ECAS_3_L_curr_level) 120 <
+                        {if}
+                            (L.L.ECAS_zieldruck_3_L) (L.L.ECAS_3_L_curr_level) (F.L.ECAS_reg) + 850000 min (S.L.ECAS_zieldruck_3_L)
+                        {endif}
+                        
+                        (L.L.ECAS_3_L_curr_level) 135 >
+                        {if}
+                            (L.L.ECAS_zieldruck_3_L) (L.L.ECAS_3_L_curr_level) (F.L.ECAS_reg) - 100000 max (S.L.ECAS_zieldruck_3_L)
+                        {endif}
+                    {endif}
+                {endif}
+            {endif}
+
+        {endif}
+    {else}
+        0 (S.L.ECAS_valve_allowed_0_R) (S.L.ECAS_valve_allowed_0_L)
+        0 (S.L.ECAS_offset_count_0_R) (S.L.ECAS_relevel_active_0_R) (S.L.ECAS_target_reached_0_R)
+        0 (S.L.ECAS_offset_count_0_L) (S.L.ECAS_relevel_active_0_L) (S.L.ECAS_target_reached_0_L)
+        0 (S.L.ECAS_valve_allowed_1_R) (S.L.ECAS_valve_allowed_1_L)
+        0 (S.L.ECAS_offset_count_1_R) (S.L.ECAS_relevel_active_1_R) (S.L.ECAS_target_reached_1_R)
+        0 (S.L.ECAS_offset_count_1_L) (S.L.ECAS_relevel_active_1_L) (S.L.ECAS_target_reached_1_L)
+        0 (S.L.ECAS_valve_allowed_2_R) (S.L.ECAS_valve_allowed_2_L)
+        0 (S.L.ECAS_offset_count_2_R) (S.L.ECAS_relevel_active_2_R) (S.L.ECAS_target_reached_2_R)
+        0 (S.L.ECAS_offset_count_2_L) (S.L.ECAS_relevel_active_2_L) (S.L.ECAS_target_reached_2_L)
+        0 (S.L.ECAS_valve_allowed_3_R) (S.L.ECAS_valve_allowed_3_L)
+        0 (S.L.ECAS_offset_count_3_R) (S.L.ECAS_relevel_active_3_R) (S.L.ECAS_target_reached_3_R)
+        0 (S.L.ECAS_offset_count_3_L) (S.L.ECAS_relevel_active_3_L) (S.L.ECAS_target_reached_3_L)
+    {endif}
+
+    (L.L.ECAS_kneel_allowed) (L.L.ECAS_kneel_allowed_last) =
+    (L.L.cp_kneel_up_mode) ! &&
+    (L.L.enable_auto_kneel_override) ! &&
+    (L.L.vdv_display_startuptime) 5 < ||
+    {if}
+        0 (S.L.ECAS_kneel_immidiate_command)
+    {endif}
+
+    (L.L.ECAS_clock) 0.3 >=
+    {if}
+        0 (S.L.ECAS_clock)
+    {endif}
+
+'   Final ECAS balg calculation
+
+    (L.L.Velocity) abs (F.L.susp_lean_curve) s0
+
+    (L.L.bremse_p_balg_0_R) 460000 / (L.L.A_Trans_X) 9.81 / + l0 max (S.L.Axle_Springfactor_0_R)
+    (L.L.bremse_p_balg_0_L) 460000 / (L.L.A_Trans_X) 9.81 / - l0 max (S.L.Axle_Springfactor_0_L)
+    (L.L.bremse_p_balg_1_R) 460000 / (L.L.A_Trans_X) 9.81 / + l0 max (S.L.Axle_Springfactor_1_R)
+    (L.L.bremse_p_balg_1_L) 460000 / (L.L.A_Trans_X) 9.81 / - l0 max (S.L.Axle_Springfactor_1_L)
+
+    (C.L.axle_count) 3 >= 
+    {if}
+        (L.L.bremse_p_balg_2_R) 460000 / (L.L.A_Trans_X) 9.81 / + l0 max (S.L.Axle_Springfactor_2_R)
+        (L.L.bremse_p_balg_2_L) 460000 / (L.L.A_Trans_X) 9.81 / - l0 max (S.L.Axle_Springfactor_2_L)
+    {endif}
+    
+    (C.L.axle_count) 4 >= 
+    {if}
+        (L.L.bremse_p_balg_3_R) 460000 / (L.L.A_Trans_X) 9.81 / + l0 max (S.L.Axle_Springfactor_3_R)
+        (L.L.bremse_p_balg_3_L) 460000 / (L.L.A_Trans_X) 9.81 / - l0 max (S.L.Axle_Springfactor_3_L)
+    {endif}
+
+{end}
+
+{macro:bremse_kompressor}
+
+	(L.L.bremse_kompressor) 1 =
+	{if}
+		(L.L.engine_n) (L.S.Timegap) * 60 / (C.L.bremse_m_kompressor) * 
+		(C.L.RT_Luft) * (C.L.pneum_V_main_supply_line) / (L.L.pneum_main_supply_line) + (S.L.pneum_main_supply_line)
+	{endif}
+
+{end}
+
+{macro:bremse_druckausgleich}
+	
+'	l1	Druck im Beh�lter 1
+'	l2	Druck im Beh�lter 2
+'	l3	Volumen Beh�lter 1
+'	l4	Volumen Beh�lter 2
+'	l5	Querschnittsfl�che Verbindungsleitung
+'...
+'	l6	tempor�re Variable, die die maximale Zeitkonstante enth�lt
+
+	l1 l2 + 2 / l1 l2 - s0 * (C.L.RT_Luft) / abs sqrt l0 sgn * l5 * (C.L.RT_Luft) * s0
+
+	l1 l2 - 1 l3 / 1 l4 / + l0 * / s6
+
+	(L.S.Timegap) l6 min   l0     * l4 / l2 + s2
+	(L.S.Timegap) l6 min   l0 /-/ * l3 / l1 + s1
+{end}
