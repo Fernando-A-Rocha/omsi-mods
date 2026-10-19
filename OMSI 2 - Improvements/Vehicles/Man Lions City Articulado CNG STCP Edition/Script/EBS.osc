@@ -1730,10 +1730,7 @@
 		(L.L.vis_autokneel_type) 3 = ||
 		(L.L.vis_autokneel_type) 4 = ||
 		{if}
-			(L.L.cg_active)
-			(L.L.doorTarget_23) ||
-			(L.L.doorTarget_45) ||
-			(L.L.doorTarget_67) ||
+			(L.L.doorTarget_67)
 			(L.L.enable_auto_kneel_override) ! &&
 			(L.L.enable_killauto_kneeling) ! &&
 			(L.L.elec_busbar_main) &&
@@ -1747,13 +1744,8 @@
 				{if}
 					1 (S.L.ECAS_kneel_allowed)
 				{else}
-					(L.L.door_2) 1 <
-					(L.L.door_3) 1 < &&
-					(L.L.door_4) 1 < &&
-					(L.L.door_5) 1 < &&
-					(L.L.door_6) 1 < &&
+					(L.L.door_6) 1 <
 					(L.L.door_7) 1 < &&
-					(L.L.cg_active) ! &&
 					(L.L.cp_kneel_up_mode) 1 = ||
 					{if}
 						0 (S.L.ECAS_kneel_allowed) (S.L.enable_auto_kneel_override)
@@ -1767,13 +1759,8 @@
 			{if}
 				1 (S.L.ECAS_kneel_allowed)
 			{else}
-				(L.L.door_2) 1 <
-				(L.L.door_3) 1 < &&
-				(L.L.door_4) 1 < &&
-				(L.L.door_5) 1 < &&
-				(L.L.door_6) 1 < &&
+				(L.L.door_6) 1 <
 				(L.L.door_7) 1 < &&
-				(L.L.cg_active) ! &&
 				(L.L.cp_kneel_up_mode) 1 = ||
 				{if}
 					0 (S.L.ECAS_kneel_allowed) (S.L.enable_auto_kneel_override)

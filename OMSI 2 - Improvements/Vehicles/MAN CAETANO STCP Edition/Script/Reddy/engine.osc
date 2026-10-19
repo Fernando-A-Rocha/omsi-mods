@@ -1436,7 +1436,6 @@
 	(L.L.door_20h_sw) ||
 	(C.L.engine_e-gas) &&
 	(L.L.engine_injection_on) ! ||
-	(L.L.cg_active) ||
 	{if}
 		0 (S.L.engine_internal_throttle)
 	{endif}

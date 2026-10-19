@@ -100,7 +100,6 @@
 	
 	(L.L.vis_dashboard_door_button_count) 2 <=
 	{if}
-		1 (S.L.door_20h_sw)
 		(M.L.trg_bus_doorback23)
 		1 (S.L.cockpit_tuertaster2)
 		(T.L.ev_tuertaster_ein)
@@ -136,7 +135,6 @@
 	
 	(L.L.vis_dashboard_door_button_count) 1 <=
 	{if}
-		1 (S.L.door_20h_sw)
 		(M.L.trg_bus_doorfront5)
 		1 (S.L.cockpit_tuertaster3)
 		(T.L.ev_tuertaster_ein)
@@ -413,11 +411,8 @@
 			-1 (S.L.door_all) (S.L.door_all_sw)
             (M.L.door_all)
 		{else}
-			(L.L.door_open_supervisor)
-			{if}
-				1 (S.L.door_all) (S.L.door_all_sw)
-                (M.L.door_all)
-			{endif}
+			1 (S.L.door_all) (S.L.door_all_sw)
+            (M.L.door_all)
 		{endif}
 		(T.L.ev_VDV_toggle_on)
 	{endif}
@@ -468,11 +463,8 @@
 
 	(L.L.vis_dashboard_door_all_button) 1 =
 	{if}
-        (L.L.door_open_supervisor)
-        {if}
-            1 (S.L.door_all)
-            (M.L.door_all)
-        {endif}
+        1 (S.L.door_all)
+        (M.L.door_all)
 		(T.L.ev_VDV_toggle_on)
 	{endif}
 
@@ -495,7 +487,7 @@
 {trigger:CG_active}
 	(L.L.vis_cg_type) 4 = !
 	{if}
-		(L.L.CG_active) ! (S.L.CG_active) (S.L.door_20h_sw)
+		(L.L.CG_active) ! (S.L.CG_active)
 		(L.L.CG_active)
 		{if}
 		(T.L.ev_VDV_off)
@@ -512,7 +504,7 @@
 {trigger:bus_dooraft}
 	(L.L.vis_cg_type) 4 = !
 	{if}
-		(L.L.CG_active) ! (S.L.CG_active) (S.L.door_20h_sw)
+		(L.L.CG_active) ! (S.L.CG_active)
 		(L.L.CG_active)
 		{if}
 		(T.L.ev_VDV_off)
@@ -1265,14 +1257,13 @@
 		0 (S.L.haltewunschlampe) (S.L.haltewunsch)
 	{endif}
 
-	(L.L.door_20h_sw) (L.L.door_2) ! && 
-	(L.L.door_3) ! && (L.L.door_4) ! && (L.L.door_5) ! &&
-	(L.L.kneel_allowed) ! && (L.L.Throttle) 0 > && (L.L.CG_active) ! &&
+	(L.L.door_20h_sw)
+	(L.L.kneel_allowed) ! && (L.L.Throttle) 0 > &&
 	{if}
 	    0 (S.L.door_20h_sw)
 	{endif}
 	
-	(L.L.door_all) 0 = ! (L.L.DoorOpen_Unlocked) &&
+	(L.L.door_all) 0 = !
 	{if}
 		(L.L.door_all_lock) !
 		{if}
@@ -1284,7 +1275,7 @@
 	(L.L.door_0) (L.L.door_1) || (L.L.door_2) || (L.L.door_3) || (L.L.door_4) || (L.L.door_5) ||
 	(L.L.CG_active) 0 = && (L.L.CG_opened) 1 = &&
 	{if}
-        0 (S.L.CG_opened) (S.L.door_20h_sw)
+        0 (S.L.CG_opened)
 
 		(L.L.vis_cg_type) 1 = 
 		{if}
@@ -1669,7 +1660,6 @@
 	
 	(L.L.door_all) 1 =
 	{if}
-		1 (S.L.door_20h_sw)
         (L.L.doorTarget_01) ! {if} (M.L.trg_bus_doorfront0) {endif}
 		(L.L.doorTarget_23) ! {if} (M.L.trg_bus_doorback23) {endif}
 		(L.L.doorTarget_45) ! {if} (M.L.trg_bus_doorfront5) {endif}
@@ -1953,7 +1943,6 @@
 
     (L.L.Door_23_nothahn) !
     (L.L.door_nopress_state23) ! &&
-    (L.L.DoorOpen_Unlocked) &&
     (L.L.pandus_2_mode) ! &&
     (L.L.engine_timer_start) 2 > &&
 	{if}
@@ -2028,7 +2017,6 @@
 
     (L.L.Door_23_nothahn) !
     (L.L.door_nopress_state23) ! &&
-    (L.L.DoorOpen_Unlocked) &&
     (L.L.pandus_2_mode) ! &&
     (L.L.engine_timer_start) 2 > &&
 	{if}
@@ -2046,7 +2034,6 @@
 
     (L.L.Door_45_nothahn) !
     (L.L.door_nopress_state45) ! &&
-    (L.L.DoorOpen_Unlocked) &&
     (L.L.engine_timer_start) 2 > &&
 	{if}
         (L.L.doorTarget_45)
@@ -2120,7 +2107,6 @@
     
     (L.L.Door_45_nothahn) !
     (L.L.door_nopress_state45) ! &&
-    (L.L.DoorOpen_Unlocked) &&
     (L.L.engine_timer_start) 2 > &&
 	{if}
         (L.L.doorTarget_45) ! (S.L.doorTarget_45)
@@ -2137,10 +2123,6 @@
 
 	(L.L.bremse_halte_sw) !
 	(L.L.door_20h_sw) ! &&
-    (L.L.door_2) 0.1 <= &&
-	(L.L.door_3) 0.1 <= &&
-    (L.L.door_4) 0.1 <= &&
-	(L.L.door_5) 0.1 <= &&
 	(L.L.elec_busbar_main) ! ||
 	(L.L.bremse_halte) &&
 	(L.L.throttle) 0.1 > &&
