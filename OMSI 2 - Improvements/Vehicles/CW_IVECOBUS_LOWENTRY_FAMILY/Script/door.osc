@@ -1,0 +1,2034 @@
+'##############
+'Door Script
+'##############
+
+'Controls Doors
+
+'(c) 2007-2009 R�diger H�lsmann
+'(c) 2007-2009 Marcel Kuhnt
+
+'Script Version: 1.1
+'Omsi release: 1.0
+
+'Needs:
+'- elec
+
+'Revision History:
+'- Marcel Kuhnt		13.06.2009	Batterietrennschalter => elec_busbar_main
+'- Marcel Kuhnt		21.06.2009	AI-Unterst�tzung hinzugef�gt	
+'- R�diger H�lsmann	24.10.2009	Ansteuerung des Kinderwagenwunsches modifiziert
+'- R�diger H�lsmann	19.12.2009	Timer f�r Ausstiegst�r jetzt Timegap-basiert, Bugfix: T�r schlie�t jetzt nur bei elec_busbar=1
+'- R�diger H�lsmann	22.09.2010	Door light trigger value set to 0.1
+'- R�diger H�lsmann	07.11.2010	Door speed based on reservoir pressure, air-operated doors made an option
+'- Marcel Kuhnt		08.11.2010	AI procedure closing doors debugged
+'- R�diger H�lsmann	21.11.2010	Front doors only operable when busbar on
+'- R�diger H�lsmann	23.12.2010	External front door operation included, option: doors only operable with actual stop brake
+'- R�diger H�lsmann	31.12.2010	Electric door function debugged
+'- R�diger H�lsmann	05.01.2011	20h-switch
+'- R�diger H�lsmann	07.01.2011	Backdoor manual switch sound debugged, 20h switch depending on bus type
+'- R�diger H�lsmann	19.01.2011	Electric door support
+
+'--------------------------------------------------------------------------------
+
+{trigger:bus_doorfront0}
+
+
+	(L.L.cp_elecidle) (C.L.door_needs_stopbrake) ! &&
+	(L.L.cp_elecidle) (L.L.bremse_halte) (C.L.door_needs_stopbrake) && && ||
+	{if}
+
+
+' 00 left 01 right
+
+		(L.L.cp_doors_single_sw)
+		{if}
+			(L.L.doorTarget_01) 1 = {if} (M.L.trg_bus_doorfront01) {endif}
+
+			(M.L.trg_bus_doorfront0)
+		{else}
+
+			(L.L.doorTarget_01) 1 =
+			(L.L.doorTarget_0) 0 = &&
+			{if}
+				(M.L.trg_bus_doorfront01)
+			{else}
+				(L.L.doorTarget_01) 0 =
+				(L.L.doorTarget_0) 1 = &&
+				{if}
+					(M.L.trg_bus_doorfront0)
+				
+				{else}
+					(L.L.doorTarget_01) 0 =
+					(L.L.doorTarget_0) 0 = &&
+					{if}
+						(M.L.trg_bus_doorfront0)
+						(M.L.trg_bus_doorfront01)
+					{else}
+						(L.L.doorTarget_01) 1 =
+						(L.L.doorTarget_0) 1 = &&
+						{if}
+							(M.L.trg_bus_doorfront0)
+							(M.L.trg_bus_doorfront01)
+						{endif}
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+	{else}
+		1 (S.L.cp_tuer0_sw)
+	{endif}
+	(T.L.ev_sw_doors_on)
+{end}
+
+{trigger:bus_doorfront0_off}
+	0 (S.L.cp_tuer0_sw)
+	(L.L.doorTarget_0) 0 =
+	{if}
+		(T.L.ev_sw_doors_off)
+	{else}
+		(T.L.ev_sw_doors_on)
+	{endif}
+{end}
+
+{trigger:bus_doorfront0_external}
+	-1 (S.L.door_external_sw)
+	(L.L.elec_busbar_avail)
+	{if}
+	0 (S.L.doors_beep_front_duration)
+	1 (S.L.doors_beep_front_running) (S.L.doors_beep_front_avail)
+	(T.L.ev_busdoorfrontexternal)
+	
+		(L.L.doorTarget_0) !
+		{if}
+
+
+				(L.L.door_front_type_val) 3 =
+				(L.L.cp_doors_single_sw) &&
+				{if}
+					(T.L.ev_0_doortriggeropen_01)
+					(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+				{else}
+					(L.L.door_front_type_val) 2 =
+					(L.L.cp_doors_single_sw) &&
+					{if}
+						(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+						(T.L.ev_0_doortriggeropen_01)
+					{else}
+						(L.L.doorTarget_01) ! (S.L.doorTarget_01)
+						(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+						(T.L.ev_0_doortriggeropen_0)
+					{endif}
+				{endif}
+
+		{else}
+			(L.L.Velocity) (C.L.door_close_max_velocity_target) <
+			{if}
+
+
+				(L.L.door_front_type_val) 3 =
+				(L.L.cp_doors_single_sw) &&
+				{if}
+					(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+					(T.L.ev_0_doortriggerclose_01)
+				{else}
+					(L.L.door_front_type_val) 2 =
+					(L.L.cp_doors_single_sw) &&
+					{if}
+						(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+						(T.L.ev_0_doortriggerclose_01)
+					{else}
+						(L.L.doorTarget_01) ! (S.L.doorTarget_01)
+						(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+						(T.L.ev_0_doortriggerclose_0)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+	{endif}
+	(T.L.ev_doorexternal_on)
+{end}
+
+{trigger:bus_doorfront0_external_off}
+	0 (S.L.door_external_sw)
+	(T.L.ev_doorexternal_off)
+{end}
+
+{trigger:bus_doorfront1}
+	(L.L.cp_elecidle)
+	{if}
+		(M.L.trg_bus_doorfront1)
+	{else}
+		1 (S.L.cp_tuer1_sw)
+	{endif}
+	(T.L.ev_sw_doors_on)
+{end}
+
+{trigger:bus_doorfront1_off}
+	(T.L.ev_kippschalter_aus)
+	0 (S.L.cp_tuer1_sw)
+	(L.L.doorTarget_1) 0 =
+	{if}
+		(T.L.ev_sw_doors_off)
+	{else}
+		(T.L.ev_sw_doors_on)
+	{endif}
+{end}
+
+{trigger:bus_dooraft}
+	1 (S.L.cp_brakevalve_sw)
+
+	(L.L.sv_dash_bvalve_callback)
+	(L.L.Velocity) abs 1 < &&
+	(L.L.elec_busbar_main) &&
+	{if}
+		(L.L.cp_brakevalve_licht) ! (S.L.cp_brakevalve_licht)
+		
+		(L.L.cp_brakevalve_licht) 1 =
+		{if}
+			(T.L.ev_brake_valve_set)
+		{else}
+			(T.L.ev_brake_valve_rel)
+		{endif}
+	{endif}
+
+	(L.L.sv_dash_bvalve_callback)
+	{if}
+		(T.L.ev_sw_main_on)
+	{endif}
+{end}
+
+{trigger:bus_dooraft_off}
+	0 (S.L.cp_brakevalve_sw)
+	(L.L.sv_dash_bvalve_callback)
+	{if}
+		(T.L.ev_sw_main_off)
+	{endif}
+{end}
+
+{trigger:bus_20h-switch}
+	(C.L.cockpit_has_20h_switch)
+	{if}
+		(M.L.trg_bus_20h-switch)
+	{endif}
+{end}
+
+{trigger:int_haltewunsch}
+	1 (S.L.haltewunsch)
+{end}
+
+{trigger:door_haltewunsch}
+	1 (S.L.haltewunsch) (S.L.door_haltewunsch_knopfdruck)
+{end}
+
+{trigger:door_haltewunsch_off}
+	0 (S.L.door_haltewunsch_knopfdruck)
+{end}
+
+{trigger:cp_schalter_kinderwagen}
+	(L.L.door_handsteuerung) ! (S.L.door_handsteuerung)
+	{if}
+		0 (S.L.door_kinderwagenwunsch)
+		(T.L.ev_kippschalter_ein)
+	{else}
+		(T.L.ev_kippschalter_aus)
+	{endif}
+		
+{end}
+
+{trigger:door_kinderwagenwunsch}
+	(L.L.bremse_halte) (L.L.door_handsteuerung) ! &&
+	{if}
+		1 (S.L.door_kinderwagenwunsch)
+	{endif}
+{end}
+
+{trigger:cp_doorEntriegelung_01}
+
+{end}
+
+
+{macro:Door_Init}
+	1000 random 500 / 1 - (C.L.door_acc_var) * (C.L.fdoor_acc) + (S.L.doorAcc_0)
+	1000 random 500 / 1 - (C.L.door_acc_var) * (C.L.fdoor_acc) + (S.L.doorAcc_01)
+	1000 random 500 / 1 - (C.L.door_acc_var) * (C.L.fdoor_acc) + (S.L.doorAcc_1)
+	1000 random 500 / 1 - (C.L.door_acc_var) * (C.L.bdoor_acc) + (S.L.doorAcc_2)
+	1000 random 500 / 1 - (C.L.door_acc_var) * (C.L.bdoor_acc) + (S.L.doorAcc_3)
+
+	1000 random 500 / 1 - (C.L.door_maxspeed_var) * (C.L.fdoor_maxspeed) + (S.L.doorMaxSpeed_0_norm)
+	1000 random 500 / 1 - (C.L.door_maxspeed_var) * (C.L.fdoor_maxspeed) + (S.L.doorMaxSpeed_01_norm)
+	1000 random 500 / 1 - (C.L.door_maxspeed_var) * (C.L.fdoor_maxspeed) + (S.L.doorMaxSpeed_1_norm)
+	1000 random 500 / 1 - (C.L.door_maxspeed_var) * (C.L.bdoor_maxspeed) + (S.L.doorMaxSpeed_2_norm)
+	1000 random 500 / 1 - (C.L.door_maxspeed_var) * (C.L.bdoor_maxspeed) + (S.L.doorMaxSpeed_3_norm)
+
+
+	(C.L.door_front_type) 3 =
+	{if}
+		0.25 (S.L.doorRefl_0)
+	{endif}
+
+	(C.L.door_front_type) 2 =
+	{if}
+		0.25 (S.L.doorRefl_0)
+	{endif}
+
+
+	(C.L.door_middle_type) 0 =
+	{if}
+		0.25 (S.L.doorRefl_1)
+	{endif}
+
+	(C.L.door_middle_type) 1 =
+	{if}
+		0.25 (S.L.doorRefl_1)
+	{endif}
+	
+{end}
+
+{macro:Door_Frame}
+
+	(C.L.door_front_type) (S.L.door_front_type_val)
+	(C.L.door_middle_type) (S.L.door_middle_type_val)
+	(C.L.door_rear_type) (S.L.door_rear_type_val)
+
+	(M.L.Door0_Calc)
+	(M.L.Door1_Calc)
+	(M.L.Door2_Calc)
+	(M.L.DoorAftCalc)
+
+	(L.L.doorTarget_1) (S.L.doorTarget_2)
+	(L.L.doorTarget_1) (S.L.doorTarget_21)
+
+	(L.L.door_0) 0.9 > (S.L.PAX_Entry0_Open)
+	
+
+
+	(L.L.door_1) 0.9 > (S.L.PAX_Exit0_Open) (S.L.PAX_Exit1_Open)
+
+
+'	Gasoline hood prevent
+		(L.L.door_1) 0.38 >
+		(C.L.door_middle_type) 2 < &&
+		{if}
+			(L.L.gasoline_hood_sw) 1 =
+			(L.L.gasoline_hood_repeat) 0 = &&
+			{if}
+				1 (S.L.gasoline_hood_repeat)
+				(T.L.ev_exthood_cls)
+			{endif}
+			0 (S.L.gasoline_hood_sw)
+		{else}
+			0 (S.L.gasoline_hood_repeat)
+		{endif}
+
+	(L.L.door_rear_type_val) 0 >
+	(L.L.door_21) 0.38 > &&
+	(L.L.adblue_hood_sw) 1 = &&
+	{if}
+		0 (S.L.adblue_hood_sw)
+	{endif}
+
+
+'	Doors status
+
+	(L.L.door_0) 0.1 >
+	(L.L.cp_elecidle) &&
+	{if}
+		1 (S.L.doors_are_open)
+		1 (S.L.door_light_1)
+		1 (S.L.doors_toplights_front)
+	{else}
+		(L.L.cp_licht_emer_sw)
+		(L.L.cp_elecidle) &&
+		{if}
+			1 (S.L.door_light_1)
+			0 (S.L.doors_toplights_front)
+		{else}
+			0 (S.L.door_light_1)
+			0 (S.L.doors_toplights_front)
+		{endif}
+	{endif}
+
+	(C.L.door_rear_type) 0 =
+	{if}
+		(L.L.door_0) 0.1 <
+		(L.L.door_11) 0.05 < &&
+		{if}
+			0 (S.L.doors_are_open)
+		{endif}
+
+		(L.L.door_11) 0.05 >
+		(L.L.cp_elecidle) &&
+		{if}
+			1 (S.L.doors_are_open)
+			1 (S.L.door_light_2)
+			1 (S.L.doors_toplights_rear)
+		{else}
+			(L.L.cp_licht_emer_sw)
+			(L.L.cp_elecidle) &&
+			{if}
+				1 (S.L.door_light_2)
+				0 (S.L.doors_toplights_rear)
+			{else}
+				0 (S.L.door_light_2)
+				0 (S.L.doors_toplights_rear)
+			{endif}
+		{endif}
+	{else}
+		(L.L.door_0) 0.1 <
+		(L.L.door_1) 0.05 < &&
+		{if}
+			0 (S.L.doors_are_open)
+		{endif}
+
+		(L.L.door_1) 0.05 >
+		(L.L.cp_elecidle) &&
+		{if}
+			1 (S.L.doors_are_open)
+			1 (S.L.door_light_2)
+			1 (S.L.doors_toplights_rear)
+		{else}
+			(L.L.cp_licht_emer_sw)
+			(L.L.cp_elecidle) &&
+			{if}
+				1 (S.L.door_light_2)
+				0 (S.L.doors_toplights_rear)
+			{else}
+				0 (S.L.door_light_2)
+				0 (S.L.doors_toplights_rear)
+			{endif}
+		{endif}
+	{endif}
+
+
+	(L.L.throttle) 0.06 >
+	(L.L.doors_bremse) 1 = &&
+	(L.L.doors_bremse_active) 0 = &&
+	(L.L.elec_busbar_main) &&
+	{if}
+		(T.L.ev_doors_bremse_rel)
+		0 (S.L.doors_bremse)
+		0 (S.L.doors_bremse_active)
+	{endif}
+
+	(L.L.throttle) 0.06 >
+	(L.L.doors_bremse_active) 0 = &&
+	(L.L.elec_busbar_main) &&
+	{if}
+		0 (S.L.doors_bremse)
+	{endif}
+
+	(L.L.throttle) 0.06 >
+	(L.L.cp_brakevalve_licht) 1 = &&
+	(L.L.elec_busbar_main) &&
+	{if}
+		(T.L.ev_brake_valve_rel)
+		0 (S.L.cp_brakevalve_licht)
+	{endif}
+
+'	Haltewunschlampe:
+
+	(L.L.haltewunsch)
+	(L.L.doors_are_open) 0 = &&
+	(L.L.elec_busbar_main) &&
+	{if}
+		1 (S.L.haltewunschlampe)
+	{else}
+		0 (S.L.haltewunschlampe) (S.L.haltewunsch)
+	{endif}
+
+'	Bing:
+
+	(L.L.haltewunsch) (L.L.prev_haltewunsch) ! && (L.L.elec_busbar_main) (C.L.elec_busbar_minV) > &&
+	{if}
+		(T.L.ev_stop_request)
+	{endif}		
+
+	(L.L.haltewunsch) (S.L.prev_haltewunsch)
+
+
+
+'	"Dauerfeuer"-Haltewunsch �ber Kinderwagenschalter (macht genau dasselbe wie der "trigger:int_haltewunsch"):
+	(L.L.door_handsteuerung) (L.L.door_haltewunsch_knopfdruck) ||
+	{if}
+		1 (S.L.haltewunsch)
+	{endif}
+
+'	Setzen der Haltestellenbremse erst bei Stillstand des Busses:
+	(L.L.bremse_halte_sw) (L.L.door_20h_sw) ||
+	(L.L.bremse_halte) ! (L.L.Velocity) (C.L.Door_Bremse_Halte_MaxKMH) < && &&
+	{if}
+		(L.L.elec_busbar_main)
+		{if}
+			(T.L.ev_haltebremse_an)		
+			1 (S.L.bremse_halte)
+		{endif}
+	{endif}
+
+'	T�rfreigabekriterium
+
+	(L.L.bremse_halte_sw) (L.L.bremse_halte) && (S.L.door_freigabe)
+
+'	Abfall des Kinderwagenwunsch-Relais bei fehlender Stromversorgung:
+
+	(L.L.elec_busbar_main) 0 = 
+	{if}
+		0 (S.L.door_kinderwagenwunsch)
+	{endif}
+
+'	Beleuchtung der Einstiege
+
+	(L.L.cp_elecidle)
+	{if}
+		(L.L.cockpit_has_emergency_pressure)
+		(L.L.elec_busbar_main) &&
+		{if}
+			(L.L.cockpit_has_emergency_pressure_timer_doors) (L.S.Timegap) + (S.L.cockpit_has_emergency_pressure_timer_doors) 0.5 >
+			{if}
+				(L.L.cp_tuer0_licht) ! (L.L.cp_tuer1_licht)
+				{if}
+					0 (S.L.cp_tuer0_licht) (S.L.cp_tuer1_licht)
+				{else}
+					(L.L.cp_tuer0_licht) ! (S.L.cp_tuer0_licht)
+					(L.L.cp_tuer1_licht) ! (S.L.cp_tuer1_licht)
+				{endif}
+				0 (S.L.cockpit_has_emergency_pressure_timer_doors)
+			{endif}
+		{else}
+			(L.L.door_0) 0.01 > (S.L.cp_tuer0_licht)
+			(L.L.door_1) 0.01 > (S.L.cp_tuer1_licht)
+		{endif}
+	{else}
+		0 (S.L.cp_tuer0_licht) (S.L.cp_tuer1_licht)
+		0 (S.L.doors_beep_front_running) (S.L.doors_beep_rear_running)
+		0 (S.L.haltewunschlampe)
+	{endif}
+
+
+'	Druckabh�ngige T�rgeschwindigkeit
+	
+	(C.L.door_druckluft)
+	{if}
+		(L.L.doorMaxSpeed_0_norm) (L.L.bremse_p_Tank04) 100000 - 850000 / (S.L.doorMaxSpeed_0)
+		(L.L.doorMaxSpeed_01_norm) (L.L.bremse_p_Tank04) 100000 - 850000 / (S.L.doorMaxSpeed_01)
+		(L.L.doorMaxSpeed_1_norm) (L.L.bremse_p_Tank04) 100000 - 850000 / (S.L.doorMaxSpeed_1)
+		(L.L.doorMaxSpeed_2_norm) (L.L.bremse_p_Tank04) 100000 - 850000 / (S.L.doorMaxSpeed_2)
+		(L.L.doorMaxSpeed_3_norm) (L.L.bremse_p_Tank04) 100000 - 850000 / (S.L.doorMaxSpeed_3)
+	{endif}
+'----------------------
+'	AI-Ablauf:
+
+(L.L.AI_Scheduled_AtStation) s0
+1 =
+{if}
+'Wenn T�ren ge�ffnet werden sollen:
+	(L.L.Velocity) (C.L.Door_Bremse_Halte_MaxKMH) <
+	{if}
+'Nur, wenn v < maxkmh, sonst warten
+'Taster jeweils nur bet�tigen, falls noch nicht an
+		(L.L.bremse_halte_sw) !
+		{if}
+			(M.L.trg_bus_dooraft)
+		{endif}
+		(L.L.doorTarget_0) ! (L.L.door_AI_timer) 0.3 > &&
+		{if}
+			(M.L.trg_bus_doorfront0)
+		{endif}
+		(L.L.doorTarget_1) ! (L.L.door_AI_timer) 0.6 > &&
+		{if}
+			(M.L.trg_bus_doorfront1)
+		{endif}
+	{else}
+		0 (S.L.door_AI_timer)
+	{endif}
+	(L.L.door_AI_timer) (L.S.Timegap) + (S.L.door_AI_timer)
+{else}
+l0 -1 =
+{if}
+'Wenn T�ren geschlossen werden sollen:
+'Taster jeweils nur bet�tigen, falls noch nicht aus:
+	(L.L.doorTarget_1)
+	{if}
+		(M.L.trg_bus_doorfront1)
+		0 (S.L.door_AI_timer)
+	{endif}
+	(L.L.doorTarget_0) (L.L.door_AI_timer) 0.3 > &&
+	{if}
+		(M.L.trg_bus_doorfront0)
+	{endif}
+'Haltestellenbremse erst wegnehmen, wenn alle T�ren zu. Dann auch erst den Bus AI-m��ig freigeben:
+	(L.L.door_0) 0.1 <
+	(L.L.door_1) 0.1 < &&
+	{if}
+		(L.L.bremse_halte_sw) (L.L.door_AI_timer) 0.3 > &&
+		{if}
+			(M.L.trg_bus_dooraft)
+		{endif}
+		(L.L.bremse_halte_sw) !
+		{if}
+			0 (S.L.AI_Scheduled_AtStation)
+		{endif}
+	{else}
+'Sollte eine der T�ren auf sein und die Haltestellenbremse aus, dann sofort diese einlegen
+		(L.L.bremse_halte_sw) !
+		{if}
+			(M.L.trg_bus_dooraft)
+		{endif}
+		(L.L.doorTarget_0) !
+		(L.L.doorTarget_1) ! &&
+		{if}
+			0 (S.L.door_AI_timer)
+		{endif}
+	{endif}
+	(L.L.door_AI_timer) (L.S.Timegap) + (S.L.door_AI_timer)
+{endif}
+{endif}
+
+
+{end}
+
+
+
+
+{macro:Door0_Calc}
+
+
+' 800MN Mono Front
+	(C.L.door_front_type) 0 =
+	{if}
+		(L.L.doorTarget_0) (L.L.door0_pos_z) 1 < &&
+		{if}
+			(L.L.door0_pos_z) (C.L.door0_pos_z_speed) 5 / (L.S.Timegap) * + 1 min (S.L.door0_pos_z)
+		{else}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_0)
+				{if}
+					(L.L.door_0) (F.L.door_fsingle_opn_speed) (S.L.doorMaxSpeed_0)
+				{else}
+					(L.L.door_0) (F.L.door_fsingle_cls_speed) (S.L.doorMaxSpeed_0)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+				(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_0) <
+					{if}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - (S.L.doorSpeed_0)
+					{else}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + (S.L.doorSpeed_0)
+					{endif}
+					(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0)
+				{else}
+					(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + (S.L.doorSpeed_0) 
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - (S.L.doorSpeed_0) 
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0)
+					{else}
+						0 (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.door_0) (F.L.door_inc_singleFront) (S.L.door_0_inc_singleFront) (S.L.door_0_inc_r) (S.L.door_0_inc_dblFrontBig_scd) (S.L.door_0_inc_dblFrontBig) (S.L.door_0_inc_l) (S.L.door_01_inc_r) (S.L.door_01_inc_l)
+
+		(L.L.door_0) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_0)
+			1 (S.L.door_0)
+			(L.L.doorSpeed_0) /-/ (L.L.doorRefl_0) * (S.L.doorSpeed_0)
+		{else}
+			(L.L.door_0) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_0)
+				0 (S.L.door_0)
+				(L.L.doorSpeed_0) /-/ (L.L.doorRefl_0) * (S.L.doorSpeed_0)
+			{endif}
+		{endif}
+
+		(L.L.doorTarget_0) !
+		(L.L.door0_pos_z) 0 > &&
+		(L.L.door_0) 0.05 < &&
+		{if}
+			(L.L.door0_pos_z) (C.L.door0_pos_z_speed) 5 / (L.S.Timegap) * - 0 max (S.L.door0_pos_z)
+		{endif}
+	{endif}
+
+' End - 800MN Mono Front
+
+' 800MN Double Front
+	(C.L.door_front_type) 1 =
+	{if}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_0)
+				{if}
+					(L.L.door_0) (F.L.door_front_800nohub_opn_speed) (S.L.doorMaxSpeed_0)
+				{else}
+					(L.L.door_0) (F.L.door_front_800nohub_cls_speed) (S.L.doorMaxSpeed_0)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+				(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_0) <
+					{if}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - (S.L.doorSpeed_0)
+					{else}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + (S.L.doorSpeed_0)
+					{endif}
+					(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0)
+				{else}
+					(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + (S.L.doorSpeed_0) 
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - (S.L.doorSpeed_0) 
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0)
+					{else}
+						0 (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_0) (F.L.door_inc_dblLargeL) (S.L.door_0_inc_r) 
+
+		(L.L.door_0) 1 >
+		{if}
+			1 (S.L.door_0)
+			(L.L.doorSpeed_0) /-/ 0 * (S.L.doorSpeed_0)
+		{else}
+			(L.L.door_0) 0 <
+			{if}
+				0 (S.L.door_0)
+				(L.L.doorSpeed_0) /-/ 0 * (S.L.doorSpeed_0)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_01)
+				{if}
+					(L.L.door_01) (F.L.door_front_800nohub_opn_speed_) (S.L.doorMaxSpeed_01)
+				{else}
+					(L.L.door_01) (F.L.door_front_800nohub_cls_speed_) (S.L.doorMaxSpeed_01)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_01)
+
+				(L.L.doorTarget_01) ! (L.L.doorSpeed_01) s0 abs 0.05 > (L.L.door_01) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_01) <
+					{if}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01)
+					{else}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01)
+					{endif}
+					(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+				{else}
+					(L.L.doorSpeed_01) abs 0.05 > (L.L.door_01) 1 < || (L.L.doorTarget_01) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_01) <
+						{if}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01) 
+						{else}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01) 
+						{endif}
+						(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+					{else}
+						0 (S.L.doorSpeed_01)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_01) (F.L.door_inc_dblLargeR) (S.L.door_01_inc_l) 
+
+		(L.L.door_01) 1 >
+		{if}
+			1 (S.L.door_01)
+			(L.L.doorSpeed_01) /-/ 0 * (S.L.doorSpeed_01)
+		{else}
+			(L.L.door_01) 0 <
+			{if}
+				0 (S.L.door_01)
+				(L.L.doorSpeed_01) /-/ 0 * (S.L.doorSpeed_01)
+			{endif}
+		{endif}
+
+	{endif}
+
+' End - 800MN Double Front
+
+' 1200MN Double Front
+	(C.L.door_front_type) 2 =
+	{if}
+
+			(C.L.electric_doors)
+			{if}
+
+' single mode 
+			(L.L.cp_doors_single_sw)
+			{if}
+				(L.L.doorTarget_0)
+				{if}
+
+					(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+					(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+					{if}
+						(L.L.doors_beep_disable_callback) 0 = (L.L.door_0) (F.L.door_front_1200nohub_cls_dm) (S.L.doorMaxSpeed_0)
+						(L.L.doors_beep_disable_callback) 1 = (L.L.door_0) (F.L.door_front_1200nohub_cls_dm) (S.L.doorMaxSpeed_0)
+
+						l0 /-/ (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0)
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0)
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+
+						(L.L.doors_beep_disable_callback) 0 = (L.L.door_0) (F.L.door_front_1200nohub_opn_dm) (S.L.doorMaxSpeed_0)
+						(L.L.doors_beep_disable_callback) 1 = (L.L.door_0) (F.L.door_front_1200nohub_opn_dm) (S.L.doorMaxSpeed_0)
+
+
+						(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+						{if}
+							l0 (L.L.doorMaxSpeed_0) <
+							{if}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0) 
+							{else}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0) 
+							{endif}
+							(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+						{else}
+							0 (S.L.doorSpeed_0)
+						{endif}
+					{endif}
+
+
+			{else}
+
+					(L.L.door_0) (F.L.door_front_1200nohub_cls_dm) (S.L.doorMaxSpeed_0)
+
+					(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+					(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+					{if}
+						l0 /-/ (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0)
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0)
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+						(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+						{if}
+							l0 (L.L.doorMaxSpeed_0) <
+							{if}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1.415132 * (S.L.doorSpeed_0) 
+							{else}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0) 
+							{endif}
+							(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+						{else}
+							0 (S.L.doorSpeed_0)
+						{endif}
+					{endif}
+
+
+				{endif}
+
+			{else}
+				(L.L.doorTarget_0)
+				{if}
+					(L.L.door_0) (F.L.door_front_1200nohub_opn_speed) (S.L.doorMaxSpeed_0)
+				{else}
+					(L.L.door_0) (F.L.door_front_1200nohub_cls_speed) (S.L.doorMaxSpeed_0)
+				{endif}
+				1 s6
+				1 s7
+
+				(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+				(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_0) <
+					{if}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l7 * (S.L.doorSpeed_0)
+					{else}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l6 * (S.L.doorSpeed_0)
+					{endif}
+					(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+				{else}
+					(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l7 * (S.L.doorSpeed_0) 
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l6 * (S.L.doorSpeed_0) 
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+						0 (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+
+			{endif}
+			{endif}
+
+        (L.L.door_0) (F.L.door_inc_dblLargeL) (S.L.door_0_inc_dblFrontBig) 
+		(L.L.door_0) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_0)
+			1 (S.L.door_0)
+			(L.L.doorSpeed_0) /-/ 0.253 * (S.L.doorSpeed_0)
+		{else}
+			(L.L.door_0) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_0)
+				0 (S.L.door_0) 
+				(L.L.doorSpeed_0) /-/ 0 * (S.L.doorSpeed_0)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_01)
+				{if}
+					(L.L.door_01) (F.L.door_front_1200nohub_opn_speed_) (S.L.doorMaxSpeed_01)
+				{else}
+					(L.L.door_01) (F.L.door_front_1200nohub_cls_speed_) (S.L.doorMaxSpeed_01)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_01)
+
+				(L.L.doorTarget_01) ! (L.L.doorSpeed_01) s0 abs 0.05 > (L.L.door_01) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_01) <
+					{if}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01)
+					{else}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01)
+					{endif}
+					(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+				{else}
+					(L.L.doorSpeed_01) abs 0.05 > (L.L.door_01) 1 < || (L.L.doorTarget_01) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_01) <
+						{if}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01) 
+						{else}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01) 
+						{endif}
+						(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+					{else}
+						0 (S.L.doorSpeed_01)
+					{endif}
+				{endif}
+			{endif}
+
+        (L.L.door_01) (F.L.door_inc_dblLargeR) (S.L.door_0_inc_dblFrontBig_scd) 
+		(L.L.door_01) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_0)
+			1 (S.L.door_01)
+			(L.L.doorSpeed_01) /-/ 0.253 * (S.L.doorSpeed_01)
+		{else}
+			(L.L.door_01) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_0)
+				0 (S.L.door_01) 
+				(L.L.doorSpeed_01) /-/ 0 * (S.L.doorSpeed_01)
+			{endif}
+		{endif}
+
+	{endif}
+
+' End - 1200MN Double Front
+
+
+
+' 1200MN Bode Front
+	(C.L.door_front_type) 3 =
+	{if}
+
+			(C.L.electric_doors)
+			{if}
+
+' single mode 
+			(L.L.cp_doors_single_sw)
+			{if}
+				(L.L.doorTarget_0)
+				{if}
+
+					(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+					(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+					{if}
+						(L.L.doors_beep_disable_callback) 0 = (L.L.door_0) (F.L.front_door_bode_cls_spd_dm) (S.L.doorMaxSpeed_0)
+						(L.L.doors_beep_disable_callback) 1 = (L.L.door_0) (F.L.front_door_bode_cls_spd_dm) (S.L.doorMaxSpeed_0)
+
+						l0 /-/ (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0)
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0)
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+
+						(L.L.doors_beep_disable_callback) 0 = (L.L.door_0) (F.L.front_door_bode_opn_spd_dm) (S.L.doorMaxSpeed_0)
+						(L.L.doors_beep_disable_callback) 1 = (L.L.door_0) (F.L.front_door_bode_opn_spd_dm) (S.L.doorMaxSpeed_0)
+
+
+						(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+						{if}
+							l0 (L.L.doorMaxSpeed_0) <
+							{if}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0) 
+							{else}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0) 
+							{endif}
+							(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+						{else}
+							0 (S.L.doorSpeed_0)
+						{endif}
+					{endif}
+
+
+				{else}
+
+					(L.L.door_0) (F.L.front_door_bode_cls_spd_dm) (S.L.doorMaxSpeed_0)
+
+					(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+					(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+					{if}
+						l0 /-/ (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0)
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1 * (S.L.doorSpeed_0)
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+						(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+						{if}
+							l0 (L.L.doorMaxSpeed_0) <
+							{if}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + 1.415132 * (S.L.doorSpeed_0) 
+							{else}
+								(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - 1 * (S.L.doorSpeed_0) 
+							{endif}
+							(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+						{else}
+							0 (S.L.doorSpeed_0)
+						{endif}
+					{endif}
+
+
+				{endif}
+
+			{else}
+				(L.L.doorTarget_0)
+				{if}
+					(L.L.door_0) (F.L.front_door_bode_opn_spd) (S.L.doorMaxSpeed_0)
+				{else}
+					(L.L.door_0) (F.L.front_door_bode_cls_spd) (S.L.doorMaxSpeed_0)
+				{endif}
+				1 s6
+				1 s7
+
+				(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+				(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_0) <
+					{if}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l7 * (S.L.doorSpeed_0)
+					{else}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l6 * (S.L.doorSpeed_0)
+					{endif}
+					(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+				{else}
+					(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l7 * (S.L.doorSpeed_0) 
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l6 * (S.L.doorSpeed_0) 
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+						0 (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+
+			{endif}
+
+
+
+			{endif}
+
+
+		(L.L.door_0) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_0)
+			1 (S.L.door_0)
+			(L.L.doorSpeed_0) /-/ 0.253 * (S.L.doorSpeed_0)
+		{else}
+			(L.L.door_0) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_0)
+				0 (S.L.door_0) 
+				(L.L.doorSpeed_0) /-/ 0 * (S.L.doorSpeed_0)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_01)
+				{if}
+					(L.L.door_01) (F.L.front_door_bode_opn_spd_) (S.L.doorMaxSpeed_01)
+				{else}
+					(L.L.door_01) (F.L.front_door_bode_cls_spd_) (S.L.doorMaxSpeed_01)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_01)
+
+				(L.L.doorTarget_01) ! (L.L.doorSpeed_01) s0 abs 0.05 > (L.L.door_01) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_01) <
+					{if}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01)
+					{else}
+						(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01)
+					{endif}
+					(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+				{else}
+					(L.L.doorSpeed_01) abs 0.05 > (L.L.door_01) 1 < || (L.L.doorTarget_01) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_01) <
+						{if}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * + (S.L.doorSpeed_01) 
+						{else}
+							(L.L.doorSpeed_01) (L.L.doorAcc_01) (L.S.Timegap) * - (S.L.doorSpeed_01) 
+						{endif}
+						(L.L.door_01) (L.L.doorSpeed_01) (L.S.Timegap) * + (S.L.door_01)
+					{else}
+						0 (S.L.doorSpeed_01)
+					{endif}
+				{endif}
+			{endif}
+
+
+		(L.L.door_01) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_0)
+			1 (S.L.door_01)
+			(L.L.doorSpeed_01) /-/ 0.253 * (S.L.doorSpeed_01)
+		{else}
+			(L.L.door_01) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_0)
+				0 (S.L.door_01) 
+				(L.L.doorSpeed_01) /-/ 0 * (S.L.doorSpeed_01)
+			{endif}
+		{endif}
+
+	{endif}
+
+' END - 1200MN Bode Front
+
+
+' 900MN Bode Front
+	(C.L.door_front_type) 4 =
+	{if}
+				(L.L.doorTarget_0)
+				{if}
+					(L.L.door_0) (F.L.front_door_bode900_opn_spd) (S.L.doorMaxSpeed_0)
+				{else}
+					(L.L.door_0) (F.L.front_door_bode900_cls_spd) (S.L.doorMaxSpeed_0)
+				{endif}
+				1 s6
+				1 s7
+
+				(C.L.fdoor_acc) (S.L.doorAcc_0)
+
+				(L.L.doorTarget_0) ! (L.L.doorSpeed_0) s0 abs 0.05 > (L.L.door_0) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_0) <
+					{if}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l7 * (S.L.doorSpeed_0)
+					{else}
+						(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l6 * (S.L.doorSpeed_0)
+					{endif}
+					(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+				{else}
+					(L.L.doorSpeed_0) abs 0.05 > (L.L.door_0) 1 < || (L.L.doorTarget_0) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_0) <
+						{if}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * + l7 * (S.L.doorSpeed_0) 
+						{else}
+							(L.L.doorSpeed_0) (L.L.doorAcc_0) (L.S.Timegap) * - l6 * (S.L.doorSpeed_0) 
+						{endif}
+						(L.L.door_0) (L.L.doorSpeed_0) (L.S.Timegap) * + (S.L.door_0) 
+					{else}
+						0 (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+				(L.L.door_0) 1 >
+				{if}
+					(T.L.ev_0_doorhitopen_0)
+					1 (S.L.door_0)
+					(L.L.doorSpeed_0) /-/ 0.253 * (S.L.doorSpeed_0)
+				{else}
+					(L.L.door_0) 0 <
+					{if}
+						(T.L.ev_0_doorhitclose_0)
+						0 (S.L.door_0) 
+						(L.L.doorSpeed_0) /-/ 0 * (S.L.doorSpeed_0)
+					{endif}
+				{endif}
+	{endif}
+{end}
+
+{macro:Door1_Calc}
+' 1200MN Hub Middle
+	(C.L.door_middle_type) 0 =
+	{if}
+		(L.L.doorTarget_1) (L.L.door1_pos_z) 1 < &&
+		{if}
+			(L.L.door1_pos_z) (C.L.door1_pos_z_speed) 5 / (L.S.Timegap) * + 1 min (S.L.door1_pos_z)
+		{else}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_1)
+				{if}
+					(L.L.door_1) (F.L.door_midsy1_opn_speed) (S.L.doorMaxSpeed_1)
+				{else}
+					(L.L.door_1) (F.L.door_midsy1_cls_speed) (S.L.doorMaxSpeed_1)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_1)
+
+				(L.L.doorTarget_1) ! (L.L.doorSpeed_1) s0 abs 0.05 > (L.L.door_1) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_1) <
+					{if}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1)
+					{else}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1)
+					{endif}
+					(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1)
+				{else}
+					(L.L.doorSpeed_1) abs 0.05 > (L.L.door_1) 1 < || (L.L.doorTarget_1) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_1) <
+						{if}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1) 
+						{else}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1) 
+						{endif}
+						(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1)
+					{else}
+						0 (S.L.doorSpeed_1)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.door_1) (F.L.door_inc_dblLargeL) (S.L.door_1_inc_dblLargeL) 
+
+		(L.L.door_1) 1 >
+		{if}
+			1 (S.L.door_1)
+			(L.L.doorSpeed_1) /-/ 0.250 * (S.L.doorSpeed_1)
+		{else}
+			(L.L.door_1) 0 <
+			{if}
+				0 (S.L.door_1)
+				(L.L.doorSpeed_1) /-/ 0.250 * (S.L.doorSpeed_1)
+			{endif}
+		{endif}
+
+		(L.L.doorTarget_1) !
+		(L.L.door1_pos_z) 0 > &&
+		(L.L.door_1) 0.05 < &&
+		{if}
+			(L.L.door1_pos_z) (C.L.door1_pos_z_speed) 5 / (L.S.Timegap) * - 0 max (S.L.door1_pos_z)
+		{endif}
+' -------------- 2nd leaf
+
+		(L.L.doorTarget_11) (L.L.door11_pos_z) 1 < &&
+		{if}
+			(L.L.door11_pos_z) (C.L.door11_pos_z_speed) 5 / (L.S.Timegap) * + 1 min (S.L.door11_pos_z)
+		{else}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_11)
+				{if}
+					(L.L.door_11) (F.L.door_midsy11_opn_speed) (S.L.doorMaxSpeed_11)
+				{else}
+					(L.L.door_11) (F.L.door_midsy11_cls_speed) (S.L.doorMaxSpeed_11)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_11)
+
+				(L.L.doorTarget_11) ! (L.L.doorSpeed_11) s0 abs 0.05 > (L.L.door_11) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_11) <
+					{if}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11)
+					{else}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11)
+					{endif}
+					(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+				{else}
+					(L.L.doorSpeed_11) abs 0.05 > (L.L.door_11) 1 < || (L.L.doorTarget_11) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_11) <
+						{if}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11) 
+						{else}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11) 
+						{endif}
+						(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+					{else}
+						0 (S.L.doorSpeed_11)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.door_11) (F.L.door_inc_dblLargeR) (S.L.door_1_inc_dblLargeR) 
+
+		(L.L.door_11) 1 >
+		{if}
+			1 (S.L.door_11)
+			(L.L.doorSpeed_11) /-/ 0.250 * (S.L.doorSpeed_11)
+		{else}
+			(L.L.door_11) 0 <
+			{if}
+				0 (S.L.door_11)
+				(L.L.doorSpeed_11) /-/ 0.250 * (S.L.doorSpeed_11)
+			{endif}
+		{endif}
+
+		(L.L.doorTarget_11) !
+		(L.L.door11_pos_z) 0 > &&
+		(L.L.door_11) 0.05 < &&
+		{if}
+			(L.L.door11_pos_z) (C.L.door11_pos_z_speed) 5 / (L.S.Timegap) * - 0 max (S.L.door11_pos_z)
+		{endif}
+
+	{endif}
+
+' End - 1200MN Hub Middle
+
+' 1200MN Double Middle
+	(C.L.door_middle_type) 1 =
+	{if}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_1)
+				{if}
+					(L.L.door_1) (F.L.door_middle_1200nohub_opn_speed) (S.L.doorMaxSpeed_1)
+				{else}
+					(L.L.door_1) (F.L.door_middle_1200nohub_cls_speed) (S.L.doorMaxSpeed_1)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_1)
+
+				(L.L.doorTarget_1) ! (L.L.doorSpeed_1) s0 abs 0.05 > (L.L.door_1) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_1) <
+					{if}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1)
+					{else}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1)
+					{endif}
+					(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1)
+				{else}
+					(L.L.doorSpeed_1) abs 0.05 > (L.L.door_1) 1 < || (L.L.doorTarget_1) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_1) <
+						{if}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1) 
+						{else}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1) 
+						{endif}
+						(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1)
+					{else}
+						0 (S.L.doorSpeed_1)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_1) (F.L.door_inc_dblLargeL) (S.L.door_1_inc_dblLargeL) 
+
+		(L.L.door_1) 1 >
+		{if}
+			1 (S.L.door_1)
+			(L.L.doorSpeed_1) /-/ 0.251 * (S.L.doorSpeed_1)
+		{else}
+			(L.L.door_1) 0 <
+			{if}
+				0 (S.L.door_1)
+				(L.L.doorSpeed_1) /-/ 0.251 * (S.L.doorSpeed_1)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_11)
+				{if}
+					(L.L.door_11) (F.L.door_middle_1200nohub_opn_speed_) (S.L.doorMaxSpeed_11)
+				{else}
+					(L.L.door_11) (F.L.door_middle_1200nohub_cls_speed_) (S.L.doorMaxSpeed_11)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_11)
+
+				(L.L.doorTarget_11) ! (L.L.doorSpeed_11) s0 abs 0.05 > (L.L.door_11) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_11) <
+					{if}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11)
+					{else}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11)
+					{endif}
+					(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+				{else}
+					(L.L.doorSpeed_11) abs 0.05 > (L.L.door_11) 1 < || (L.L.doorTarget_11) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_11) <
+						{if}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11) 
+						{else}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11) 
+						{endif}
+						(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+					{else}
+						0 (S.L.doorSpeed_11)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_11) (F.L.door_inc_dblLargeR) (S.L.door_1_inc_dblLargeR) 
+
+		(L.L.door_11) 1 >
+		{if}
+			1 (S.L.door_11)
+			(L.L.doorSpeed_11) /-/ 0.251 * (S.L.doorSpeed_11)
+		{else}
+			(L.L.door_11) 0 <
+			{if}
+				0 (S.L.door_11)
+				(L.L.doorSpeed_11) /-/ 0.251 * (S.L.doorSpeed_11)
+			{endif}
+		{endif}
+
+	{endif}
+
+' End - 1200MN Double Middle
+
+' 1200MN Bode Middle
+	(C.L.door_middle_type) 2 =
+	{if}
+
+			(C.L.electric_doors)
+			{if}
+
+' single mode 
+
+				(L.L.doorTarget_1)
+				{if}
+					(L.L.door_1) (F.L.middle_door_bode_opn_spd) (S.L.doorMaxSpeed_1)
+				{else}
+					(L.L.door_1) (F.L.middle_door_bode_cls_spd) (S.L.doorMaxSpeed_1)
+				{endif}
+				1 s6
+				1 s7
+
+				(C.L.fdoor_acc) (S.L.doorAcc_1)
+
+				(L.L.doorTarget_1) ! (L.L.doorSpeed_1) s0 abs 0.05 > (L.L.door_1) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_1) <
+					{if}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1)
+					{else}
+						(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1)
+					{endif}
+					(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1) 
+				{else}
+					(L.L.doorSpeed_1) abs 0.05 > (L.L.door_1) 1 < || (L.L.doorTarget_1) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_1) <
+						{if}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * + (S.L.doorSpeed_1) 
+						{else}
+							(L.L.doorSpeed_1) (L.L.doorAcc_1) (L.S.Timegap) * - (S.L.doorSpeed_1) 
+						{endif}
+						(L.L.door_1) (L.L.doorSpeed_1) (L.S.Timegap) * + (S.L.door_1) 
+					{else}
+						0 (S.L.doorSpeed_1)
+					{endif}
+				{endif}
+			{endif}
+
+
+		(L.L.door_1) 1 >
+		{if}
+			(T.L.ev_0_doorhitopen_1)
+			1 (S.L.door_1)
+			(L.L.doorSpeed_1) /-/ 0.253 * (S.L.doorSpeed_1)
+		{else}
+			(L.L.door_1) 0 <
+			{if}
+				(T.L.ev_0_doorhitclose_1)
+				0 (S.L.door_1) 
+				(L.L.doorSpeed_1) /-/ 0 * (S.L.doorSpeed_1)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_11)
+				{if}
+					(L.L.door_11) (F.L.middle_door_bode_opn_spd_) (S.L.doorMaxSpeed_11)
+				{else}
+					(L.L.door_11) (F.L.middle_door_bode_cls_spd_) (S.L.doorMaxSpeed_11)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_11)
+
+				(L.L.doorTarget_11) ! (L.L.doorSpeed_11) s0 abs 0.05 > (L.L.door_11) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_11) <
+					{if}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11)
+					{else}
+						(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11)
+					{endif}
+					(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+				{else}
+					(L.L.doorSpeed_11) abs 0.05 > (L.L.door_11) 1 < || (L.L.doorTarget_11) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_11) <
+						{if}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * + (S.L.doorSpeed_11) 
+						{else}
+							(L.L.doorSpeed_11) (L.L.doorAcc_11) (L.S.Timegap) * - (S.L.doorSpeed_11) 
+						{endif}
+						(L.L.door_11) (L.L.doorSpeed_11) (L.S.Timegap) * + (S.L.door_11)
+					{else}
+						0 (S.L.doorSpeed_11)
+					{endif}
+				{endif}
+			{endif}
+
+
+		(L.L.door_11) 1 >
+		{if}
+			1 (S.L.door_11)
+			(L.L.doorSpeed_11) /-/ 0.253 * (S.L.doorSpeed_11)
+		{else}
+			(L.L.door_11) 0 <
+			{if}
+				0 (S.L.door_11) 
+				(L.L.doorSpeed_11) /-/ 0 * (S.L.doorSpeed_11)
+			{endif}
+		{endif}
+
+	{endif}
+
+' END - 1200MN Bode Middle
+{end}
+
+{macro:DoorAftCalc}
+
+' front
+	(L.L.door_0) 0.95 >
+	(L.L.doorTarget_0) 1 = &&
+	(L.L.doors_beep_front_avail) &&
+	{if}
+		(L.L.doors_beep_front_duration) (L.S.Timegap) + (S.L.doors_beep_front_duration)
+	{endif}
+
+	(L.L.door_0) 0.05 <
+	(L.L.doorTarget_0) 0 = &&
+	(L.L.doors_beep_front_avail) &&
+	{if}
+		(L.L.doors_beep_front_duration) (L.S.Timegap) + (S.L.doors_beep_front_duration)
+	{endif}
+
+	(L.L.doors_beep_front_duration) 1 >
+	(L.L.doorTarget_0) 1 = &&
+	{if}
+		0 (S.L.doors_beep_front_running)
+	{endif}
+
+	(L.L.doors_beep_front_duration) 2 >
+	(L.L.doorTarget_0) 0 = &&
+	{if}
+		0 (S.L.doors_beep_front_running)
+	{endif}
+
+' rear
+	(L.L.door_1) 0.95 >
+	(L.L.doorTarget_1) 1 = &&
+	(L.L.doors_beep_rear_avail) &&
+	{if}
+		(L.L.doors_beep_rear_duration) (L.S.Timegap) + (S.L.doors_beep_rear_duration)
+	{endif}
+
+	(L.L.door_1) 0.05 <
+	(L.L.doorTarget_1) 0 = &&
+	(L.L.doors_beep_rear_avail) &&
+	{if}
+		(L.L.doors_beep_rear_duration) (L.S.Timegap) + (S.L.doors_beep_rear_duration)
+	{endif}
+
+	(L.L.doors_beep_rear_duration) 1 >
+	(L.L.doorTarget_1) 1 = &&
+	{if}
+		0 (S.L.doors_beep_rear_running)
+	{endif}
+
+	(L.L.doors_beep_rear_duration) 2 >
+	(L.L.doorTarget_1) 0 = &&
+	{if}
+		0 (S.L.doors_beep_rear_running)
+	{endif}
+
+	(L.L.bremse_halte_sw) !
+	(L.L.door_20h_sw) ! &&
+	(L.L.elec_busbar_main) ! ||
+	(L.L.bremse_halte) &&
+	{if}
+		0 (S.L.bremse_halte) (S.L.doorAftLastOpen)
+		(T.L.ev_haltebremse_aus)
+	{endif}
+
+	(L.L.elec_busbar_main)
+	{if}
+		(L.L.bremse_halte)
+		{if}
+			(L.L.doorAftLastOpen) (L.S.Timegap) + (S.L.doorAftLastOpen)
+		{endif}
+
+		(L.L.doorTarget_23)
+		(L.L.doorAftLastOpen) (C.L.doorAftOpenTime) > &&
+		{if}
+			(T.L.ev_doortriggerclose_2)
+			0 (S.L.doorTarget_23)
+			(C.L.door_druckluft)
+			{if}
+			(L.L.bremse_p_Tank04) 100000 - 0.96 * 100000 + (S.L.bremse_p_Tank04)
+			{endif}
+		{endif}
+	{endif}
+{end}
+
+{macro:door2_Calc}
+
+
+' 800MN Mono Rear
+	(C.L.door_rear_type) 2 =
+	{if}
+		(L.L.doorTarget_21) (L.L.door21_pos_z) 1 < &&
+		{if}
+			(L.L.door21_pos_z) (C.L.door21_pos_z_speed) 5 / (L.S.Timegap) * + 1 min (S.L.door21_pos_z)
+		{else}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_21)
+				{if}
+					(L.L.door_21) (F.L.door_rsingle_opn_speed) (S.L.doorMaxSpeed_21)
+				{else}
+					(L.L.door_21) (F.L.door_rsingle_cls_speed) (S.L.doorMaxSpeed_21)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_21)
+
+				(L.L.doorTarget_21) ! (L.L.doorSpeed_21) s0 abs 0.05 > (L.L.door_21) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_21) <
+					{if}
+						(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * - (S.L.doorSpeed_21)
+					{else}
+						(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * + (S.L.doorSpeed_21)
+					{endif}
+					(L.L.door_21) (L.L.doorSpeed_21) (L.S.Timegap) * + (S.L.door_21)
+				{else}
+					(L.L.doorSpeed_21) abs 0.05 > (L.L.door_21) 1 < || (L.L.doorTarget_21) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_21) <
+						{if}
+							(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * + (S.L.doorSpeed_21) 
+						{else}
+							(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * - (S.L.doorSpeed_21) 
+						{endif}
+						(L.L.door_21) (L.L.doorSpeed_21) (L.S.Timegap) * + (S.L.door_21)
+					{else}
+						0 (S.L.doorSpeed_21)
+					{endif}
+				{endif}
+			{endif}
+		{endif}
+
+		(L.L.door_21) (F.L.door_inc_singleFront) (S.L.door_2_inc_dblLargeR) 
+
+		(L.L.door_21) 1 >
+		{if}
+			(T.L.ev_2_doorhitopen_2)
+			1 (S.L.door_21)
+			(L.L.doorSpeed_21) /-/ (L.L.doorRefl_21) * (S.L.doorSpeed_21)
+		{else}
+			(L.L.door_21) 0 <
+			{if}
+				(T.L.ev_2_doorhitclose_2)
+				0 (S.L.door_21)
+				(L.L.doorSpeed_21) /-/ (L.L.doorRefl_21) * (S.L.doorSpeed_21)
+			{endif}
+		{endif}
+
+		(L.L.doorTarget_21) !
+		(L.L.door21_pos_z) 0 > &&
+		(L.L.door_21) 0.05 < &&
+		{if}
+			(L.L.door21_pos_z) (C.L.door21_pos_z_speed) 5 / (L.S.Timegap) * - 0 max (S.L.door21_pos_z)
+		{endif}
+	{endif}
+
+' End - 800MN Mono Rear
+
+' 800MN Double Rear
+	(C.L.door_rear_type) 1 =
+	{if}
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_2)
+				{if}
+					(L.L.door_2) (F.L.door_rear_800nohub_opn_speed) (S.L.doorMaxSpeed_2)
+				{else}
+					(L.L.door_2) (F.L.door_rear_800nohub_cls_speed) (S.L.doorMaxSpeed_2)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_2)
+
+				(L.L.doorTarget_2) ! (L.L.doorSpeed_2) s0 abs 0.05 > (L.L.door_2) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_2) <
+					{if}
+						(L.L.doorSpeed_2) (L.L.doorAcc_2) (L.S.Timegap) * - (S.L.doorSpeed_2)
+					{else}
+						(L.L.doorSpeed_2) (L.L.doorAcc_2) (L.S.Timegap) * + (S.L.doorSpeed_2)
+					{endif}
+					(L.L.door_2) (L.L.doorSpeed_2) (L.S.Timegap) * + (S.L.door_2)
+				{else}
+					(L.L.doorSpeed_2) abs 0.05 > (L.L.door_2) 1 < || (L.L.doorTarget_2) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_2) <
+						{if}
+							(L.L.doorSpeed_2) (L.L.doorAcc_2) (L.S.Timegap) * + (S.L.doorSpeed_2) 
+						{else}
+							(L.L.doorSpeed_2) (L.L.doorAcc_2) (L.S.Timegap) * - (S.L.doorSpeed_2) 
+						{endif}
+						(L.L.door_2) (L.L.doorSpeed_2) (L.S.Timegap) * + (S.L.door_2)
+					{else}
+						0 (S.L.doorSpeed_2)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_2) (F.L.door_inc_dblLargeL) (S.L.door_2_inc_dblLargeL) 
+
+		(L.L.door_2) 1 >
+		{if}
+			1 (S.L.door_2)
+			(L.L.doorSpeed_2) /-/ 0 * (S.L.doorSpeed_2)
+		{else}
+			(L.L.door_2) 0 <
+			{if}
+				0 (S.L.door_2)
+				(L.L.doorSpeed_2) /-/ 0 * (S.L.doorSpeed_2)
+			{endif}
+		{endif}
+
+
+' -------------- 2nd leaf
+
+
+			(C.L.electric_doors)
+			{if}
+				(L.L.doorTarget_21)
+				{if}
+					(L.L.door_21) (F.L.door_rear_800nohub_opn_speed_) (S.L.doorMaxSpeed_21)
+				{else}
+					(L.L.door_21) (F.L.door_rear_800nohub_cls_speed_) (S.L.doorMaxSpeed_21)
+				{endif}
+
+				(C.L.fdoor_acc) (S.L.doorAcc_21)
+
+				(L.L.doorTarget_21) ! (L.L.doorSpeed_21) s0 abs 0.05 > (L.L.door_21) 0 > || && 
+				{if}
+					l0 /-/ (L.L.doorMaxSpeed_21) <
+					{if}
+						(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * - (S.L.doorSpeed_21)
+					{else}
+						(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * + (S.L.doorSpeed_21)
+					{endif}
+					(L.L.door_21) (L.L.doorSpeed_21) (L.S.Timegap) * + (S.L.door_21)
+				{else}
+					(L.L.doorSpeed_21) abs 0.05 > (L.L.door_21) 1 < || (L.L.doorTarget_21) &&
+					{if}
+						l0 (L.L.doorMaxSpeed_21) <
+						{if}
+							(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * + (S.L.doorSpeed_21) 
+						{else}
+							(L.L.doorSpeed_21) (L.L.doorAcc_21) (L.S.Timegap) * - (S.L.doorSpeed_21) 
+						{endif}
+						(L.L.door_21) (L.L.doorSpeed_21) (L.S.Timegap) * + (S.L.door_21)
+					{else}
+						0 (S.L.doorSpeed_21)
+					{endif}
+				{endif}
+			{endif}
+
+		(L.L.door_21) (F.L.door_inc_dblLargeR) (S.L.door_2_inc_dblLargeR) 
+
+		(L.L.door_21) 1 >
+		{if}
+			1 (S.L.door_21)
+			(L.L.doorSpeed_21) /-/ 0 * (S.L.doorSpeed_21)
+		{else}
+			(L.L.door_21) 0 <
+			{if}
+				0 (S.L.door_21)
+				(L.L.doorSpeed_21) /-/ 0 * (S.L.doorSpeed_21)
+			{endif}
+		{endif}
+
+	{endif}
+
+' End - 800MN Double Rear
+
+
+{end}
+
+{macro:trg_bus_doorfront0}
+	1 (S.L.cp_tuer0_sw)
+	(T.L.ev_sw_doors_on)
+	(L.L.cp_door_lock_sw) (L.L.doorTarget_0) ! && !
+	(L.L.bremse_p_tank01) 500000 <
+	(L.L.bremse_p_tank02) 500000 < || !	&&
+	{if}
+	(L.L.doorTarget_0) !
+	{if}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_front_running) (S.L.doors_beep_front_avail)
+			0 (S.L.doors_beep_front_duration)
+		{endif}
+
+			(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+
+				(L.L.door_front_type_val) 3 =
+				(L.L.cp_doors_single_sw) &&
+				{if}
+					(T.L.ev_0_doortriggeropen_01)
+				{else}
+					(L.L.door_front_type_val) 2 =
+					(L.L.cp_doors_single_sw) &&
+					{if}
+						(T.L.ev_0_doortriggeropen_01)
+					{else}
+						(T.L.ev_0_doortriggeropen_0)
+					{endif}
+				{endif}
+
+				(L.L.doors_are_open) 0 = {if} 0 (S.L.onboard_warn_snd_rep) {endif}
+	{else}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_front_running) (S.L.doors_beep_front_avail)
+			0 (S.L.doors_beep_front_duration)
+		{endif}
+		(L.L.Velocity) (C.L.door_close_max_velocity_target) <
+		{if}
+			(L.L.doorTarget_0) ! (S.L.doorTarget_0)
+		
+				(L.L.door_front_type_val) 3 =
+				(L.L.cp_doors_single_sw) &&
+				{if}
+					(T.L.ev_0_doortriggerclose_01)
+				{else}
+					(L.L.door_front_type_val) 2 =
+					(L.L.cp_doors_single_sw) &&
+					{if}
+						(T.L.ev_0_doortriggerclose_01)
+					{else}
+						(T.L.ev_0_doortriggerclose_0)
+					{endif}
+				{endif}
+
+		{endif}
+	{endif}
+		(C.L.door_druckluft)
+		{if}
+		(L.L.bremse_p_Tank04) 100000 - 0.98 * 100000 + (S.L.bremse_p_Tank04)
+		{endif}
+	{endif}
+{end}
+
+{macro:trg_bus_doorfront01}
+
+	(L.L.cp_door_lock_sw) (L.L.doorTarget_01) ! && !
+	(L.L.bremse_p_tank01) 500000 <
+	(L.L.bremse_p_tank02) 500000 < || !	&&
+	{if}
+	(L.L.doorTarget_01) !
+	{if}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_front_running) (S.L.doors_beep_front_avail)
+			0 (S.L.doors_beep_front_duration)
+		{endif}
+
+			(L.L.doorTarget_01) ! (S.L.doorTarget_01)
+
+
+				(L.L.doors_are_open) 0 = {if} 0 (S.L.onboard_warn_snd_rep) {endif}
+	{else}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_front_running) (S.L.doors_beep_front_avail)
+			0 (S.L.doors_beep_front_duration)
+		{endif}
+		(L.L.Velocity) (C.L.door_close_max_velocity_target) <
+		{if}
+			(L.L.doorTarget_01) ! (S.L.doorTarget_01)
+		
+
+		{endif}
+	{endif}
+		(C.L.door_druckluft)
+		{if}
+		(L.L.bremse_p_Tank04) 100000 - 0.98 * 100000 + (S.L.bremse_p_Tank04)
+		{endif}
+	{endif}
+
+{end}
+
+{macro:trg_bus_doorfront1}
+	1 (S.L.cp_tuer1_sw)
+	(T.L.ev_sw_doors_on)
+	(L.L.cp_door_lock_sw) (L.L.doorTarget_0) ! && !
+	(L.L.bremse_p_tank01) 500000 <
+	(L.L.bremse_p_tank02) 500000 < || !	&&
+	{if}
+	(L.L.doorTarget_1) !
+	{if}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_rear_running) (S.L.doors_beep_rear_avail)
+			0 (S.L.doors_beep_rear_duration)
+		{endif}
+		
+		
+			(L.L.doorTarget_1) ! (S.L.doorTarget_1)
+			(L.L.doorTarget_11) ! (S.L.doorTarget_11)
+
+			(T.L.ev_0_doortriggeropen_1) (T.L.ev_0_doortriggeropen_2) 1 (S.L.doors_beep_rear_avail)
+
+				(L.L.doors_are_open) 0 = {if} 0 (S.L.onboard_warn_snd_rep) {endif}
+	{else}
+		(L.L.Velocity) (C.L.door_open_max_velocity_target) <
+		{if}
+			1 (S.L.doors_beep_rear_running) (S.L.doors_beep_rear_avail)
+			0 (S.L.doors_beep_rear_duration)
+		{endif}
+		(L.L.Velocity) (C.L.door_close_max_velocity_target) <
+		{if}
+			(L.L.doorTarget_1) ! (S.L.doorTarget_1)
+			(L.L.doorTarget_11) ! (S.L.doorTarget_11)
+
+			(T.L.ev_0_doortriggerclose_1) (T.L.ev_0_doortriggerclose_2) 1 (S.L.doors_beep_rear_avail)
+		{endif}
+	{endif}	
+		(C.L.door_druckluft)
+		{if}
+		(L.L.bremse_p_Tank04) 100000 - 0.98 * 100000 + (S.L.bremse_p_Tank04)
+		{endif}
+	{endif}
+{end}
+
+{macro:trg_bus_dooraft}
+'	(L.L.bremse_halte_sw) ! (S.L.bremse_halte_sw)
+	
+'	(L.L.bremse_halte_sw)
+'	{if}
+'		(T.L.ev_kippschalter_ein)
+'	{else}
+'		(T.L.ev_kippschalter_aus)
+'	{endif}	
+{end}
+
+{macro:trg_bus_20h-switch}
+	(L.L.door_20h_sw) ! (S.L.door_20h_sw)
+	
+	(L.L.door_20h_sw)
+	{if}
+		(T.L.ev_haltebremse_sw_an)
+	{else}
+		(T.L.ev_haltebremse_sw_aus)
+	{endif}	
+{end}
+
+{macro:kippschaltersound}
+	l1
+	{if}
+		(T.L.ev_kippschalter_ein)
+	{else}
+		(T.L.ev_kippschalter_aus)
+	{endif}	
+{end}
